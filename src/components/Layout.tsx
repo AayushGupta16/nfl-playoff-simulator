@@ -1,5 +1,5 @@
 import React from 'react';
-import { BookOpen } from 'lucide-react';
+import { BookOpen, Github } from 'lucide-react';
 import { Link, useLocation } from 'react-router-dom';
 import { clsx } from 'clsx';
 
@@ -21,7 +21,7 @@ export const Layout: React.FC<Props> = ({ children }) => {
             </div>
           </Link>
           
-          <div className="flex items-center gap-4 text-sm">
+          <div className="flex items-center gap-2 sm:gap-4 text-sm">
             
             <Link 
                 to="/methodology" 
@@ -35,6 +35,16 @@ export const Layout: React.FC<Props> = ({ children }) => {
                 <BookOpen className="w-4 h-4" />
                 <span className="hidden sm:inline">Methodology</span>
             </Link>
+
+            <a 
+                href="https://github.com/AayushGupta16/nfl-playoff-simulator" 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="flex items-center gap-2 px-3 py-2 rounded-md transition-colors text-sm font-medium text-slate-600 hover:bg-slate-50 hover:text-slate-900"
+            >
+                <Github className="w-4 h-4" />
+                <span className="hidden sm:inline">GitHub</span>
+            </a>
           </div>
         </div>
       </header>
