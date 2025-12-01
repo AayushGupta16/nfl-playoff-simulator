@@ -12,8 +12,11 @@ import { LoadingThrobber } from './components/LoadingThrobber';
 import { AlertCircle } from 'lucide-react';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 
+import { clsx } from 'clsx';
+
 // Main Simulator Component
 function Simulator() {
+  const [activeTab, setActiveTab] = useState<'picks' | 'results'>('results');
   const [teams, setTeams] = useState<Team[]>([]);
   const [games, setGames] = useState<Game[]>([]);
   // UI odds (Kalshi + Elo fallback) for displaying schedule probabilities
@@ -196,24 +199,57 @@ function Simulator() {
         {loadingData ? (
         <LoadingThrobber />
         ) : (
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start h-[calc(100vh-8rem)]">
+          <>
+            {/* Mobile Tabs */}
+            <div className="flex lg:hidden border-b border-slate-200 mb-4 bg-white -mx-4 px-4 sticky top-16 z-20 shadow-sm">
+              <button
+                onClick={() => setActiveTab('results')}
+                className={clsx(
+                  "flex-1 py-3 text-sm font-bold uppercase tracking-wider border-b-2 transition-colors",
+                  activeTab === 'results'
+                    ? "border-blue-600 text-blue-600"
+                    : "border-transparent text-slate-500 hover:text-slate-700"
+                )}
+              >
+                Results
+              </button>
+              <button
+                onClick={() => setActiveTab('picks')}
+                className={clsx(
+                  "flex-1 py-3 text-sm font-bold uppercase tracking-wider border-b-2 transition-colors",
+                  activeTab === 'picks'
+                    ? "border-blue-600 text-blue-600"
+                    : "border-transparent text-slate-500 hover:text-slate-700"
+                )}
+              >
+                Make Picks
+              </button>
+            </div>
+
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start lg:h-[calc(100vh-8rem)]">
             
             {/* Left Column: Schedule (Scrollable) */}
-          <div className="lg:col-span-5 h-full bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden flex flex-col">
+            <div className={clsx(
+                "lg:col-span-5 bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden flex flex-col",
+                activeTab === 'results' ? "hidden lg:flex h-full" : "flex h-auto lg:h-full"
+            )}>
                  <GameList 
                     games={games} 
-                teams={teams}
+                    teams={teams}
                     odds={odds} 
                     simulatedOdds={simulatedOdds}
                     userPicks={userPicks} 
                     onPick={handlePick} 
-                onReset={handleResetPicks}
-                hasPicks={userPicks.size > 0}
+                    onReset={handleResetPicks}
+                    hasPicks={userPicks.size > 0}
                  />
             </div>
 
             {/* Right Column: Results & Config (Scrollable) */}
-          <div className="lg:col-span-7 h-full overflow-y-auto pr-1 custom-scrollbar flex flex-col gap-6">
+            <div className={clsx(
+                "lg:col-span-7 lg:overflow-y-auto lg:pr-1 custom-scrollbar flex flex-col gap-6",
+                activeTab === 'picks' ? "hidden lg:flex h-full" : "flex h-auto lg:h-full overflow-visible"
+            )}>
               <SimulationConfig 
                 count={simCount} 
                 setCount={setSimCount} 
@@ -226,6 +262,7 @@ function Simulator() {
                 </div>
             </div>
           </div>
+          </>
         )}
     </Layout>
   );

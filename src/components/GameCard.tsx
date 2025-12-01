@@ -29,7 +29,7 @@ export const GameCard: React.FC<Props> = ({ game, homeTeam, awayTeam, prob, user
   // Actually 538 uses a list of games where you check the winner box.
   
   return (
-    <div className="flex items-center justify-between py-2 px-1 border-b border-slate-100 hover:bg-slate-50 transition-colors group text-sm">
+    <div className="flex items-center justify-between py-3 px-2 border-b border-slate-100 hover:bg-slate-50 transition-colors group text-sm">
         
         {/* Away Team Section */}
         <div className="flex items-center gap-2 flex-1 min-w-0">
@@ -45,7 +45,7 @@ export const GameCard: React.FC<Props> = ({ game, homeTeam, awayTeam, prob, user
             <button
                 onClick={() => onPick(game.id, isAwayPicked ? null : game.awayTeamId)}
                 className={cn(
-                    "w-5 h-5 rounded border flex items-center justify-center transition-all",
+                    "w-6 h-6 rounded border flex items-center justify-center transition-all",
                     isAwayPicked 
                         ? "bg-slate-800 border-slate-800 text-white" 
                         : "bg-white border-slate-300 hover:border-slate-400 text-transparent"
@@ -73,7 +73,7 @@ export const GameCard: React.FC<Props> = ({ game, homeTeam, awayTeam, prob, user
             <button
                 onClick={() => onPick(game.id, isHomePicked ? null : game.homeTeamId)}
                 className={cn(
-                    "w-5 h-5 rounded border flex items-center justify-center transition-all",
+                    "w-6 h-6 rounded border flex items-center justify-center transition-all",
                     isHomePicked 
                         ? "bg-slate-800 border-slate-800 text-white" 
                         : "bg-white border-slate-300 hover:border-slate-400 text-transparent"

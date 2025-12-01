@@ -110,7 +110,7 @@ export const Results: React.FC<Props> = ({ results, teams, simDuration }) => {
         <table className="w-full text-sm text-left border-collapse">
           <thead className="text-[10px] text-slate-400 uppercase bg-white border-b border-slate-100 sticky top-0 z-10 font-bold tracking-wider">
             <tr>
-              <th className="px-4 py-2 cursor-pointer hover:bg-slate-50 w-48" onClick={() => handleSort('name')}>
+              <th className="px-4 py-2 cursor-pointer hover:bg-slate-50 min-w-[140px] sm:w-48" onClick={() => handleSort('name')}>
                 Team
               </th>
               <th className="px-2 py-2 text-right cursor-pointer hover:bg-slate-50 hidden sm:table-cell w-20" onClick={() => handleSort('div')}>
@@ -122,7 +122,7 @@ export const Results: React.FC<Props> = ({ results, teams, simDuration }) => {
               <th className="px-2 py-2 text-right cursor-pointer hover:bg-slate-50 hidden sm:table-cell w-20" onClick={() => handleSort('seed1')}>
                 1st Seed
               </th>
-              <th className="px-4 py-2 text-right cursor-pointer hover:bg-slate-50 w-32 bg-slate-50/50 border-l border-slate-100" onClick={() => handleSort('prob')}>
+              <th className="px-4 py-2 text-right cursor-pointer hover:bg-slate-50 w-28 sm:w-32 bg-slate-50/50 border-l border-slate-100" onClick={() => handleSort('prob')}>
                 Make Playoffs
               </th>
           </tr>
@@ -177,7 +177,7 @@ export const Results: React.FC<Props> = ({ results, teams, simDuration }) => {
                   <td className="px-4 py-2.5 text-right relative border-l border-slate-100 bg-slate-50/30">
                       <div className="flex flex-col items-end text-right">
                         <span className={clsx(
-                            "font-bold tabular-nums leading-none text-base",
+                            "font-bold tabular-nums leading-none text-sm sm:text-base",
                             probVal >= 50 ? "text-slate-900" : "text-slate-400",
                             probVal > 99 && "text-green-600"
                         )}>

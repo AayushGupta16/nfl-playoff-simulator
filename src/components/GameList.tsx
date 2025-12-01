@@ -1,7 +1,7 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import type { Game, Team } from '../types';
 import { GameCard } from './GameCard';
-import { CalendarDays, RotateCcw } from 'lucide-react';
+import { CalendarDays, RotateCcw, ChevronDown, ChevronRight } from 'lucide-react';
 import { clsx } from 'clsx';
 
 interface Props {
@@ -33,6 +33,21 @@ export const GameList: React.FC<Props> = ({ games, teams, odds, simulatedOdds, u
     }, [remainingGames]);
 
     const weeks = Object.keys(gamesByWeek).map(Number).sort((a, b) => a - b);
+
+    // Track collapsed weeks
+    const [collapsedWeeks, setCollapsedWeeks] = useState<Set<number>>(new Set());
+
+    const toggleWeek = (week: number) => {
+        setCollapsedWeeks(prev => {
+            const next = new Set(prev);
+            if (next.has(week)) {
+                next.delete(week);
+            } else {
+                next.add(week);
+            }
+            return next;
+        });
+    };
 
     if (remainingGames.length === 0) {
         return (
@@ -66,30 +81,40 @@ export const GameList: React.FC<Props> = ({ games, teams, odds, simulatedOdds, u
             </div>
             
             <div className="flex-1 overflow-y-auto p-0 custom-scrollbar">
-                {weeks.map(week => (
+                {weeks.map(week => {
+                    const isCollapsed = collapsedWeeks.has(week);
+                    return (
                     <div key={week}>
-                        <div className="sticky top-0 z-10 bg-slate-100 py-1 px-4 border-y border-slate-200 text-[11px] font-bold text-slate-500 uppercase tracking-widest">
-                            Week {week}
-                        </div>
-                        <div className="px-2">
-                            {gamesByWeek[week].map(game => {
-                                // Use simulated odds if available (dynamic), otherwise static market odds
-                                const prob = simulatedOdds?.get(game.id) ?? odds.get(game.id) ?? game.homeWinProb ?? 0.5;
-                                return (
-                                    <GameCard
-                                        key={game.id}
-                                        game={game}
-                                        homeTeam={teamMap.get(game.homeTeamId)}
-                                        awayTeam={teamMap.get(game.awayTeamId)}
-                                        prob={prob}
-                                        userPick={userPicks.get(game.id)}
-                                        onPick={onPick}
-                                    />
-                                );
-                            })}
-                        </div>
+                        <button 
+                            onClick={() => toggleWeek(week)}
+                            className="w-full sticky top-0 z-10 bg-slate-100 py-2 px-4 border-y border-slate-200 text-[11px] font-bold text-slate-500 uppercase tracking-widest flex items-center justify-between hover:bg-slate-200/50 transition-colors"
+                        >
+                            <span>Week {week}</span>
+                            {isCollapsed ? <ChevronRight className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                        </button>
+                        
+                        {!isCollapsed && (
+                            <div className="px-2">
+                                {gamesByWeek[week].map(game => {
+                                    // Use simulated odds if available (dynamic), otherwise static market odds
+                                    const prob = simulatedOdds?.get(game.id) ?? odds.get(game.id) ?? game.homeWinProb ?? 0.5;
+                                    return (
+                                        <GameCard
+                                            key={game.id}
+                                            game={game}
+                                            homeTeam={teamMap.get(game.homeTeamId)}
+                                            awayTeam={teamMap.get(game.awayTeamId)}
+                                            prob={prob}
+                                            userPick={userPicks.get(game.id)}
+                                            onPick={onPick}
+                                        />
+                                    );
+                                })}
+                            </div>
+                        )}
                     </div>
-                ))}
+                    );
+                })}
             </div>
         </div>
     );
