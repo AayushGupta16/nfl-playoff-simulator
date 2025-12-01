@@ -46,7 +46,31 @@ const ELO_PER_WIN = 28;
  */
 const PYTHAGOREAN_EXPONENT = 2.37;
 
-const KALSHI_BASE_URL = '/api/kalshi/trade-api/v2';
+// In production, we use a serverless function that takes path as a query param
+const IS_PROD = typeof window !== 'undefined' && !window.location.hostname.includes('localhost');
+const KALSHI_BASE_URL = IS_PROD ? '/api/kalshi' : '/api/kalshi/trade-api/v2';
+
+// Helper to build URL for Kalshi API calls
+const buildKalshiUrl = (endpoint: string, params?: Record<string, string | number>): string => {
+    if (IS_PROD) {
+        const url = new URL('/api/kalshi', window.location.origin);
+        url.searchParams.set('path', `trade-api/v2/${endpoint}`);
+        if (params) {
+            Object.entries(params).forEach(([key, value]) => {
+                url.searchParams.set(key, String(value));
+            });
+        }
+        return url.toString();
+    } else {
+        const url = new URL(`${KALSHI_BASE_URL}/${endpoint}`, window.location.origin);
+        if (params) {
+            Object.entries(params).forEach(([key, value]) => {
+                url.searchParams.set(key, String(value));
+            });
+        }
+        return url.toString();
+    }
+};
 
 // --- TEAM ABBREVIATION MAPPINGS ---
 
@@ -98,7 +122,7 @@ export const fetchKalshiWinTotals = async (): Promise<Map<string, number>> => {
     console.log("Fetching Kalshi season win totals...");
 
     try {
-        const seriesResponse = await axios.get(`${KALSHI_BASE_URL}/series?limit=200`);
+        const seriesResponse = await axios.get(buildKalshiUrl('series', { limit: 200 }));
         const nflWinSeries = seriesResponse.data.series?.filter((s: any) =>
             s.ticker.startsWith('KXNFLWINS-') && !s.ticker.includes('EXACT')
         ) || [];
@@ -115,9 +139,11 @@ export const fetchKalshiWinTotals = async (): Promise<Map<string, number>> => {
             }
 
             try {
-                const marketsResponse = await axios.get(`${KALSHI_BASE_URL}/markets`, {
-                    params: { series_ticker: series.ticker, limit: 50, status: 'open' }
-                });
+                const marketsResponse = await axios.get(buildKalshiUrl('markets', {
+                    series_ticker: series.ticker,
+                    limit: 50,
+                    status: 'open'
+                }));
 
                 const markets = marketsResponse.data.markets || [];
                 const winMarkets: KalshiWinMarket[] = [];

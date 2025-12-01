@@ -19,8 +19,30 @@
 import axios from 'axios';
 import type { Game } from '../types';
 
-// Proxied URL - see vite.config.ts for proxy configuration
-const BASE_URL = '/api/kalshi/trade-api/v2';
+// In production, we use a serverless function that takes path as a query param
+const IS_PROD = typeof window !== 'undefined' && !window.location.hostname.includes('localhost');
+
+// Helper to build URL for Kalshi API calls
+const buildKalshiUrl = (endpoint: string, params?: Record<string, string | number>): string => {
+    if (IS_PROD) {
+        const url = new URL('/api/kalshi', window.location.origin);
+        url.searchParams.set('path', `trade-api/v2/${endpoint}`);
+        if (params) {
+            Object.entries(params).forEach(([key, value]) => {
+                url.searchParams.set(key, String(value));
+            });
+        }
+        return url.toString();
+    } else {
+        const url = new URL(`/api/kalshi/trade-api/v2/${endpoint}`, window.location.origin);
+        if (params) {
+            Object.entries(params).forEach(([key, value]) => {
+                url.searchParams.set(key, String(value));
+            });
+        }
+        return url.toString();
+    }
+};
 
 // Map full team names to Kalshi abbreviations
 const NAME_TO_ABBR: Record<string, string> = {
@@ -70,14 +92,14 @@ export const fetchKalshiOdds = async (games: Game[]): Promise<Map<string, number
         const MAX_PAGES = 10;
         
         do {
-            const params: any = {
+            const params: Record<string, string | number> = {
                 limit: 200,
                 status: 'open',
                 series_ticker: 'KXNFLGAME'
             };
             if (cursor) params.cursor = cursor;
             
-            const response = await axios.get(`${BASE_URL}/markets`, { params });
+            const response = await axios.get(buildKalshiUrl('markets', params));
             const data = response.data;
             
             if (data.markets) {
