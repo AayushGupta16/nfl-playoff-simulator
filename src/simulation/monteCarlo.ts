@@ -7,13 +7,9 @@
 
 import type { Team, Game, SimulationResult } from '../types';
 import { sortTeams, type TeamStatsMap, type SeasonStats } from './tieBreakers';
-import { HOME_FIELD_ADVANTAGE } from '../services/eloService';
+import { calculateWinProbability } from '../services/eloService';
 
 const K_FACTOR = 20;
-
-// Pre-computed constants for Elo probability calculation
-const LOG10_FACTOR = Math.log(10);
-const ELO_SCALE = 400;
 
 // --- HELPERS ---
 
@@ -24,15 +20,6 @@ export const eloDiffToWinProb = (diff: number): number => {
 export const winProbToEloDiff = (prob: number): number => {
     const p = Math.max(0.01, Math.min(0.99, prob));
     return -400 * Math.log10(1 / p - 1);
-};
-
-/**
- * Fast inline Elo probability calculation.
- * Avoids function call overhead in hot loop.
- */
-const fastWinProb = (teamElo: number, opponentElo: number, homeAdvantage: number): number => {
-    const diff = teamElo - opponentElo + homeAdvantage;
-    return 1 / (1 + Math.exp(-diff * LOG10_FACTOR / ELO_SCALE));
 };
 
 // --- MAIN SIMULATION ---
@@ -238,10 +225,10 @@ export const runSimulation = (
                 if (winnerId) {
                     homeWins = winnerId === home.id;
                 } else {
-                    // Use pre-computed market odds or fast inline Elo calc
+                    // Use pre-computed market odds or standard Elo calc
                     const winProb = hasMarketOdds 
                         ? marketOdds 
-                        : fastWinProb(homeElo, awayElo, HOME_FIELD_ADVANTAGE);
+                        : calculateWinProbability(homeElo, awayElo, true);
                     homeWins = Math.random() < winProb;
                     winnerId = homeWins ? home.id : away.id;
                 }
@@ -268,8 +255,8 @@ export const runSimulation = (
                         }
                     }
                     
-                    // Inline Elo update
-                    const winnerExpected = fastWinProb(homeElo, awayElo, HOME_FIELD_ADVANTAGE);
+                    // Elo update
+                    const winnerExpected = calculateWinProbability(homeElo, awayElo, true);
                     const eloChange = K_FACTOR * (1 - winnerExpected);
                     simElo[homeIdx] = homeElo + eloChange;
                     simElo[awayIdx] = awayElo - eloChange;
@@ -287,8 +274,8 @@ export const runSimulation = (
                         }
                     }
                     
-                    // Inline Elo update (away team won)
-                    const winnerExpected = fastWinProb(awayElo, homeElo, -HOME_FIELD_ADVANTAGE);
+                    // Elo update (away team won)
+                    const winnerExpected = calculateWinProbability(awayElo, homeElo, false);
                     const eloChange = K_FACTOR * (1 - winnerExpected);
                     simElo[awayIdx] = awayElo + eloChange;
                     simElo[homeIdx] = homeElo - eloChange;
