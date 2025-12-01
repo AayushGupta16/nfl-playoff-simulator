@@ -31,27 +31,30 @@ export const Methodology: React.FC = () => {
           </section>
 
           <section>
-            <h2 className="text-2xl font-bold text-slate-900 mb-4">Win Probabilities</h2>
+            <h2 className="text-2xl font-bold text-slate-900 mb-4">Game Outcomes</h2>
+            <p className="mb-6">
+              We use real-money prediction markets from <a href="https://kalshi.com" target="_blank" rel="noreferrer" className="text-blue-600 hover:underline">Kalshi</a> for everything. We do not maintain our own "power rankings" or predictive model.
+            </p>
 
             <div className="space-y-4">
               <div className="bg-slate-50 p-4 rounded-lg border border-slate-200">
-                <h3 className="font-bold text-slate-900 mb-1">Kalshi Markets</h3>
+                <h3 className="font-bold text-slate-900 mb-1">1. Direct Market Odds</h3>
                 <p className="text-sm text-slate-600">
-                  For upcoming games (~2 weeks out), we use real-money prediction market prices from Kalshi.
+                  For upcoming games where a market exists (~2 weeks out), we use the exact win probability from Kalshi.
                 </p>
               </div>
 
               <div className="bg-slate-50 p-4 rounded-lg border border-slate-200">
-                <h3 className="font-bold text-slate-900 mb-1">Elo Ratings</h3>
+                <h3 className="font-bold text-slate-900 mb-1">2. Kalshi-Implied Elo</h3>
                 <p className="text-sm text-slate-600 mb-3">
-                  For games without market data, we calculate win probability from Elo ratings. Each team's Elo is derived from Kalshi season win total markets.
+                  For future games without markets (e.g. Week 18), we calculate win probability using a "Kalshi-Implied Elo." This is derived directly from each team's <strong>Season Win Total</strong> market.
+                </p>
+                <p className="text-sm text-slate-600 mb-3">
+                  If the market expects the Chiefs to win 12.5 games, we convert that number into an Elo rating (~1612). This ensures that our long-term simulations align with what the market believes about each team's strength, pricing in injuries, schedule difficulty, and roster talent automatically.
                 </p>
                 <code className="block bg-slate-800 text-slate-200 p-3 rounded text-sm font-mono">
-                  P(Win) = 1 / (1 + 10^(-EloDiff / 400))
+                  Elo = 1500 + (ExpectedWins - 8.5) * 28
                 </code>
-                <p className="text-xs text-slate-500 mt-2">
-                  Home teams get +48 Elo (~57% baseline).
-                </p>
               </div>
             </div>
           </section>

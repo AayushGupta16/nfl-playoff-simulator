@@ -22,13 +22,18 @@ Open http://localhost:5173
 
 ## How it works
 
-1. Fetches standings from ESPN and odds from Kalshi
-2. For each simulation:
-   - Simulates remaining games using weighted random outcomes
-   - Updates Elo after each game (dampened to prevent runaway favorites)
-   - Applies NFL tiebreaker rules
-   - Records who made playoffs
-3. Aggregates results across all simulations
+1. **Fetches Market Data:** 
+   - Gets current standings from ESPN.
+   - Gets game odds and season win totals from **Kalshi**.
+2. **Derives Team Strength:**
+   - Converts Kalshi's "Expected Wins" into an Elo rating for each team.
+   - This allows us to model future games that don't have markets yet.
+3. **Monte Carlo Simulation:**
+   - Simulates the remaining schedule 5,000 times.
+   - Updates Elo dynamically after each simulated game (momentum).
+   - Applies NFL tiebreaker rules to determine seeding.
+4. **Aggregates Results:**
+   - Calculates % chance of making playoffs, winning division, etc.
 
 ## Tiebreakers
 
