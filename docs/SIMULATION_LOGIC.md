@@ -1,6 +1,6 @@
 # Simulation Logic
 
-5,000 Monte Carlo iterations. Each iteration simulates the rest of the season and records who makes the playoffs.
+10,000 Monte Carlo iterations. Each iteration simulates the rest of the season and records who makes the playoffs.
 
 ## Game Outcomes
 
@@ -31,26 +31,20 @@ This is intentionally market-based, not a traditional Elo system that replays ga
 
 ## Simulation loop
 
-For each of 5,000 iterations:
+For each of 10,000 iterations:
 
 1. Clone current standings
 2. Lock in any user-selected game outcomes
 3. Simulate remaining games week by week:
    - Roll random number against win probability
    - Update team records
-   - Update Elo (dampened by 0.7× to prevent runaway momentum)
+   - Update Elo
 4. Apply tiebreakers to determine playoff seeding
 5. Record results
 
 ## Elo updates during simulation
 
-When simulating games, Elo changes are dampened:
-
-```
-K_sim = 20 × 0.7 = 14
-```
-
-This prevents simulated win streaks from creating unrealistic favorites.
+When simulating games, we use a standard K-factor of 20 to update ratings. This allows simulated win streaks to improve a team's odds in subsequent simulated games.
 
 ## Tiebreakers
 

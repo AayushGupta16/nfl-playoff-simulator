@@ -4,7 +4,7 @@ Monte Carlo simulation for NFL playoff odds. Runs in your browser.
 
 ## What it does
 
-Simulates the rest of the NFL season 5,000 times to estimate each team's probability of:
+Simulates the rest of the NFL season 10,000 times to estimate each team's probability of:
 - Making the playoffs
 - Winning their division  
 - Getting the #1 seed
@@ -29,21 +29,21 @@ Open http://localhost:5173
    - Converts Kalshi's "Expected Wins" into an Elo rating for each team.
    - This allows us to model future games that don't have markets yet.
 3. **Monte Carlo Simulation:**
-   - Simulates the remaining schedule 5,000 times.
-   - Updates Elo dynamically after each simulated game (momentum).
+   - Simulates the remaining schedule 10,000 times.
+   - Updates Elo dynamically after each simulated game.
    - Applies NFL tiebreaker rules to determine seeding.
 4. **Aggregates Results:**
    - Calculates % chance of making playoffs, winning division, etc.
 
 ## Tiebreakers
 
-We implement the main early/mid parts of the NFL tiebreaker procedure:
+The simulator implements the main early/mid parts of the NFL tiebreaker procedure:
 - Division: H2H → division record → common games → conference record → SOV → SOS → coin toss
 - Wildcard: H2H (sweep for 3+) → conference record → common games → SOV → SOS → coin toss
 
-**Limitations:** We skip all of the later point-based and "combined ranking" steps (various net-points rules, net touchdowns). We don't model scores for simulated games and we don't try to approximate those rules. These steps rarely decide real tiebreakers.
+**Limitations:** It skips all of the later point-based and "combined ranking" steps (various net-points rules, net touchdowns). It doesn't model scores for simulated games and doesn't try to approximate those rules. These steps rarely decide real tiebreakers.
 
-When a team is eliminated mid-tiebreaker, we restart from step 1 (per NFL rules).
+When a team is eliminated mid-tiebreaker, the simulator restarts from step 1 (per NFL rules).
 
 ## Click games to set outcomes
 

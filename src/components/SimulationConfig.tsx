@@ -50,7 +50,7 @@ export const SimulationConfig: React.FC<Props> = ({ count, setCount, onRun, isLo
                     value={count?.toLocaleString() ?? ''}
                     onChange={handleInputChange}
                     className="peer p-2.5 pl-3 pr-12 w-full sm:w-32 border border-slate-300 rounded-lg text-sm font-medium focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all text-right font-mono"
-                    placeholder="5,000"
+                    placeholder="10,000"
                 />
                 <span className="absolute right-3 top-2.5 text-xs text-slate-400 font-medium pointer-events-none">
                     SIMS

@@ -51,7 +51,7 @@ export const LoadingThrobber: React.FC = () => {
                     Simulating Season...
                 </p>
                 <p className="text-xs text-slate-400 font-medium uppercase tracking-wider">
-                    Crunching 5,000+ Possibilities
+                    Crunching 10,000+ Possibilities
                 </p>
             </div>
         </div>

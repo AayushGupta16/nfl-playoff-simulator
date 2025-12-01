@@ -16,7 +16,10 @@ import { BrowserRouter, Routes, Route } from 'react-router-dom';
 function Simulator() {
   const [teams, setTeams] = useState<Team[]>([]);
   const [games, setGames] = useState<Game[]>([]);
+  // UI odds (Kalshi + Elo fallback) for displaying schedule probabilities
   const [odds, setOdds] = useState<Map<string, number>>(new Map());
+  // Pure Kalshi game-level odds used inside the simulation
+  const [marketOdds, setMarketOdds] = useState<Map<string, number>>(new Map());
   const [kalshiElos, setKalshiElos] = useState<Map<string, number>>(new Map());
   const [simulatedOdds, setSimulatedOdds] = useState<Map<string, number>>(new Map());
   const [results, setResults] = useState<SimulationResult[]>([]);
@@ -25,7 +28,7 @@ function Simulator() {
   const [error, setError] = useState<string | null>(null);
   
   // Config State
-  const [simCount, setSimCount] = useState(5000); // Default 5,000
+  const [simCount, setSimCount] = useState(10000); // Default 10,000
   const [userPicks, setUserPicks] = useState<Map<string, string>>(new Map());
 
   // Timing State
@@ -106,8 +109,20 @@ function Simulator() {
         
         setKalshiElos(eloMap);
         
+        // Remember pure Kalshi odds for simulation
+        setMarketOdds(kalshiOdds);
+
         // Apply Elo-based odds as fallback for games without Kalshi odds (Week 16-18)
-        const combinedOdds = applyEloOdds(fetchedGames, fetchedTeams, kalshiOdds);
+        const eloFallbackOdds = applyEloOdds(fetchedGames, fetchedTeams, kalshiOdds);
+
+        // For UI, combine Kalshi odds with Elo fallback so every remaining game has a displayed probability
+        const combinedOdds = new Map<string, number>(kalshiOdds);
+        eloFallbackOdds.forEach((value, gameId) => {
+            if (!combinedOdds.has(gameId)) {
+                combinedOdds.set(gameId, value);
+            }
+        });
+
         console.log(`Combined odds (Kalshi + Elo fallback) for ${combinedOdds.size} games`);
         
         setOdds(combinedOdds);
@@ -135,11 +150,13 @@ function Simulator() {
         teams,
         games,
         count,
-        odds: Array.from(odds.entries()),
+        // IMPORTANT: simulation only receives true market odds.
+        // Elo-based games will use dynamic simElo for path-dependent probabilities.
+        odds: Array.from(marketOdds.entries()),
         userPicks: Array.from(userPicks.entries()),
         kalshiElos: Array.from(kalshiElos.entries())
     });
-  }, [teams, games, odds, userPicks, kalshiElos]);
+  }, [teams, games, marketOdds, userPicks, kalshiElos]);
 
   // Auto-run whenever user picks change
   useEffect(() => {

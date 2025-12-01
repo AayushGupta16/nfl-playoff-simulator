@@ -30,7 +30,7 @@ Elo and market odds don't update in real-time for breaking news. If a star QB ge
 
 ### Simulation variance
 
-5,000 iterations gives roughly ±1-2% precision on playoff odds. For rare events (like a bad team getting the #1 seed), variance is higher.
+10,000 iterations gives roughly ±1% precision on playoff odds. For rare events (like a bad team getting the #1 seed), variance is higher.
 
 ## Future work
 

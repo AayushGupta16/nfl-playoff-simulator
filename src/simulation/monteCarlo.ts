@@ -11,16 +11,6 @@ import { HOME_FIELD_ADVANTAGE } from '../services/eloService';
 
 const K_FACTOR = 20;
 
-/**
- * Dampens Elo updates for simulated games.
- *
- * Without dampening, a team that wins several simulated games in a row
- * would gain too much Elo, skewing later matchups. 0.7 keeps momentum
- * effects reasonable without letting them dominate.
- */
-const SIM_K_DAMPENER = 0.7;
-const SIM_K = K_FACTOR * SIM_K_DAMPENER;
-
 // Pre-computed constants for Elo probability calculation
 const LOG10_FACTOR = Math.log(10);
 const ELO_SCALE = 400;
@@ -280,7 +270,7 @@ export const runSimulation = (
                     
                     // Inline Elo update
                     const winnerExpected = fastWinProb(homeElo, awayElo, HOME_FIELD_ADVANTAGE);
-                    const eloChange = SIM_K * (1 - winnerExpected);
+                    const eloChange = K_FACTOR * (1 - winnerExpected);
                     simElo[homeIdx] = homeElo + eloChange;
                     simElo[awayIdx] = awayElo - eloChange;
                 } else {
@@ -299,7 +289,7 @@ export const runSimulation = (
                     
                     // Inline Elo update (away team won)
                     const winnerExpected = fastWinProb(awayElo, homeElo, -HOME_FIELD_ADVANTAGE);
-                    const eloChange = SIM_K * (1 - winnerExpected);
+                    const eloChange = K_FACTOR * (1 - winnerExpected);
                     simElo[awayIdx] = awayElo + eloChange;
                     simElo[homeIdx] = homeElo - eloChange;
                 }

@@ -348,17 +348,22 @@ export const initializeTeamElos = async (
 // --- ELO FALLBACK FOR UI ---
 
 /**
- * Fills in Elo-based odds for games without Kalshi market data.
- * Used for far-future games (week 16-18) that don't have active markets.
+ * Fills in **Elo-based fallback odds only** for games without Kalshi market data.
+ *
+ * - Returns a map of *only* Elo-derived odds (no Kalshi entries).
+ * - The caller is responsible for merging these with real Kalshi odds for UI display.
+ * - In the simulation, we pass only true market odds so that Elo-based games
+ *   can use dynamic `simElo` for path-dependent win probabilities.
  */
 export const applyEloOdds = (
     games: Array<{ id: string; homeTeamId: string; awayTeamId: string; isFinished: boolean }>,
     teams: Array<{ id: string; name: string; wins: number; losses: number; ties: number }>,
     kalshiOdds: Map<string, number>
 ): Map<string, number> => {
-    const combinedOdds = new Map<string, number>(kalshiOdds);
+    // This map will contain **only** Elo fallback odds for games with no Kalshi market.
+    const fallbackOdds = new Map<string, number>();
 
-    // Simple Elo from current record
+    // Simple Elo from current record as a reasonable UI fallback
     const eloMap = new Map<string, number>();
     teams.forEach(t => {
         const total = t.wins + t.losses + t.ties;
@@ -367,18 +372,19 @@ export const applyEloOdds = (
     });
 
     games.forEach(game => {
-        if (game.isFinished || combinedOdds.has(game.id)) return;
+        // Skip finished games or games that already have a real Kalshi market
+        if (game.isFinished || kalshiOdds.has(game.id)) return;
         if (!game.homeTeamId || !game.awayTeamId || game.homeTeamId === '-1') return;
 
         const homeElo = eloMap.get(game.homeTeamId);
         const awayElo = eloMap.get(game.awayTeamId);
 
         if (homeElo !== undefined && awayElo !== undefined) {
-            combinedOdds.set(game.id, calculateWinProbability(homeElo, awayElo, true));
+            fallbackOdds.set(game.id, calculateWinProbability(homeElo, awayElo, true));
         }
     });
 
-    return combinedOdds;
+    return fallbackOdds;
 };
 
 /**
