@@ -25,12 +25,17 @@ self.onmessage = (e: MessageEvent) => {
             const eloMap = new Map<string, number>(kalshiElos);
             const targetMap = new Map<string, number>(targetPlayoffOdds);
             
-            const iterations = 5;
+            const iterations = 15;
             const subSims = 1000;
             const learningRate = 300;
             const threshold = 0.02; 
+
+            let roundsRun = 0;
+            let lastMaxDiff = 0;
+            let stoppedByThreshold = false;
             
             for (let i = 0; i < iterations; i++) {
+                console.log(`--- Calibration Round ${i + 1} ---`);
                 // Run short simulation
                 const { teamResults } = runSimulation(
                     teams, 
@@ -49,9 +54,14 @@ self.onmessage = (e: MessageEvent) => {
                     if (target === undefined) continue;
                     
                     const diff = target - res.playoffProb;
+                    const currentElo = eloMap.get(res.teamId) || 1500;
+
+                    if (Math.abs(diff) >= threshold) {
+                        console.log(`${res.teamName}: Elo ${Math.round(currentElo)} | Diff ${(diff * 100).toFixed(1)}% (Target ${(target * 100).toFixed(1)}% vs Sim ${(res.playoffProb * 100).toFixed(1)}%)`);
+                    }
+
                     if (Math.abs(diff) < threshold) continue;
                     
-                    const currentElo = eloMap.get(res.teamId) || 1500;
                     let adjustment = diff * learningRate;
                     // Clamp adjustment
                     adjustment = Math.max(-50, Math.min(50, adjustment));
@@ -60,8 +70,27 @@ self.onmessage = (e: MessageEvent) => {
                     maxDiff = Math.max(maxDiff, Math.abs(diff));
                 }
                 
+                roundsRun = i + 1;
+                lastMaxDiff = maxDiff;
+
                 // If we're close enough, stop early
-                if (maxDiff < threshold) break;
+                if (maxDiff < threshold) {
+                    stoppedByThreshold = true;
+                    break;
+                }
+            }
+
+            if (stoppedByThreshold) {
+                console.log(
+                    `Calibration finished early after ${roundsRun} rounds: ` +
+                    `max diff ${(lastMaxDiff * 100).toFixed(2)}% < ` +
+                    `${(threshold * 100).toFixed(1)}% threshold.`
+                );
+            } else {
+                console.log(
+                    `Calibration finished after hitting iteration limit (${iterations} rounds). ` +
+                    `Final max diff ${(lastMaxDiff * 100).toFixed(2)}%.`
+                );
             }
             
             self.postMessage({ 
