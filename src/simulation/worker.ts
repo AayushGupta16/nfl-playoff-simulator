@@ -25,7 +25,7 @@ self.onmessage = (e: MessageEvent) => {
             const eloMap = new Map<string, number>(kalshiElos);
             const targetMap = new Map<string, number>(targetPlayoffOdds);
             
-            const iterations = 15;
+            const iterations = 25;
             const subSims = 1000;
             const learningRate = 300;
             const threshold = 0.02; 
