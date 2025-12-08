@@ -28,7 +28,7 @@ self.onmessage = (e: MessageEvent) => {
             const iterations = 5;
             const subSims = 1000;
             const learningRate = 300;
-            const threshold = 0.05;
+            const threshold = 0.02; 
             
             for (let i = 0; i < iterations; i++) {
                 // Run short simulation
