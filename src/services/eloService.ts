@@ -315,10 +315,23 @@ export const initializeTeamElos = async (
     const eloMap = new Map<string, TeamElo>();
     const kalshiWins = await fetchKalshiWinTotals();
 
+    // If Kalshi is missing some teams (e.g. markets settled, rate-limited, or temporarily delisted),
+    // fall back to a reasonable league-average expected wins instead of throwing and breaking the app.
+    const kalshiExpectedWins = Array.from(kalshiWins.values());
+    const defaultExpectedWins =
+        kalshiExpectedWins.length > 0
+            ? kalshiExpectedWins.reduce((sum, v) => sum + v, 0) / kalshiExpectedWins.length
+            : 8.5; // 8.5 ~= .500 over 17 games
+
     for (const team of teams) {
-        const expectedWins = kalshiWins.get(team.name);
+        let expectedWins = kalshiWins.get(team.name);
         if (expectedWins === undefined) {
-            throw new Error(`Missing Kalshi data for: ${team.name}`);
+            // Log once per team but do not crash – use league-average expectation.
+            console.warn(
+                `Missing Kalshi win total for: ${team.name}. ` +
+                    `Using fallback expected wins of ${defaultExpectedWins.toFixed(2)}.`
+            );
+            expectedWins = defaultExpectedWins;
         }
 
         const preseasonElo = winsToElo(expectedWins);
@@ -397,13 +410,28 @@ export const createPreseasonEloMap = async (
     const kalshiWins = await fetchKalshiWinTotals();
     const eloMap = new Map<string, number>();
 
+    // Compute a fallback expected-wins value in case Kalshi is missing some teams
+    // (e.g., markets closed, rate-limited, or not listed).
+    const kalshiExpectedWins = Array.from(kalshiWins.values());
+    const defaultExpectedWins =
+        kalshiExpectedWins.length > 0
+            ? kalshiExpectedWins.reduce((sum, v) => sum + v, 0) / kalshiExpectedWins.length
+            : 8.5;
+
     teams.forEach(t => {
-        const expectedWins = kalshiWins.get(t.name);
-        if (expectedWins !== undefined) {
-            eloMap.set(t.id, winsToElo(expectedWins));
-        } else {
-            throw new Error(`Missing Kalshi data for: ${t.name}`);
+        let expectedWins = kalshiWins.get(t.name);
+
+        if (expectedWins === undefined) {
+            // If a team doesn't have a current win-total market (or we were rate-limited),
+            // approximate them as a league-average team instead of failing the whole load.
+            console.warn(
+                `Missing Kalshi win total for: ${t.name}. ` +
+                    `Using fallback expected wins of ${defaultExpectedWins.toFixed(2)}.`
+            );
+            expectedWins = defaultExpectedWins;
         }
+
+        eloMap.set(t.id, winsToElo(expectedWins));
     });
 
     return eloMap;

@@ -90,6 +90,7 @@ export const Methodology: React.FC = () => {
               <div>
                 <h3 className="font-bold text-slate-900 border-b border-slate-200 pb-2 mb-2">Wildcard Ties</h3>
                 <ol className="list-decimal pl-5 text-sm text-slate-700 space-y-1">
+                  <li><strong>Division Filter:</strong> If tied teams are from same division, apply division tiebreaker first to eliminate all but one.</li>
                   <li>Head-to-head (sweep for 3+)</li>
                   <li>Conference record</li>
                   <li>Common games (min 4)</li>
