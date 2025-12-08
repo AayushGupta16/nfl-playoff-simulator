@@ -7,11 +7,12 @@ interface Props {
   results: SimulationResult[];
   teams: Team[]; // For logos
   simDuration?: number | null;
+  marketPlayoffOdds?: Map<string, number>;
 }
 
 type SortField = 'name' | 'prob' | 'div' | 'seed1' | 'wc';
 
-export const Results: React.FC<Props> = ({ results, teams, simDuration }) => {
+export const Results: React.FC<Props> = ({ results, teams, simDuration, marketPlayoffOdds }) => {
   const [sortField, setSortField] = useState<SortField>('prob');
   const [sortDesc, setSortDesc] = useState(true);
   const [conferenceFilter, setConferenceFilter] = useState<'ALL' | 'AFC' | 'NFC'>('ALL');
@@ -122,6 +123,11 @@ export const Results: React.FC<Props> = ({ results, teams, simDuration }) => {
               <th className="px-2 py-2 text-right cursor-pointer hover:bg-slate-50 hidden sm:table-cell w-20" onClick={() => handleSort('seed1')}>
                 1st Seed
               </th>
+              {marketPlayoffOdds && marketPlayoffOdds.size > 0 && (
+                <th className="px-2 py-2 text-right cursor-default hidden sm:table-cell w-24 border-l border-slate-100 bg-slate-50/30">
+                    Market
+                </th>
+              )}
               <th className="px-4 py-2 text-right cursor-pointer hover:bg-slate-50 w-28 sm:w-32 bg-slate-50/50 border-l border-slate-100" onClick={() => handleSort('prob')}>
                 Make Playoffs
               </th>
@@ -172,7 +178,21 @@ export const Results: React.FC<Props> = ({ results, teams, simDuration }) => {
                   </td>
                   <td className="px-2 py-2.5 text-right hidden sm:table-cell">
                       {renderProbCell(res.firstSeedProb)}
-              </td>
+                  </td>
+                  
+                  {marketPlayoffOdds && marketPlayoffOdds.size > 0 && (
+                    <td className="px-2 py-2.5 text-right hidden sm:table-cell border-l border-slate-100 bg-slate-50/10">
+                        {(() => {
+                        const marketProb =
+                            marketPlayoffOdds.get(res.teamName) ??
+                            marketPlayoffOdds.get(res.teamId);
+                        if (marketProb === undefined) {
+                            return <span className="text-slate-300">-</span>;
+                        }
+                        return renderProbCell(marketProb);
+                        })()}
+                    </td>
+                  )}
 
                   <td className="px-4 py-2.5 text-right relative border-l border-slate-100 bg-slate-50/30">
                       <div className="flex flex-col items-end text-right">
@@ -187,7 +207,7 @@ export const Results: React.FC<Props> = ({ results, teams, simDuration }) => {
                             {res.madePlayoffs.toLocaleString()}/{res.totalSimulations.toLocaleString()}
                         </span>
                      </div>
-              </td>
+                  </td>
             </tr>
               );
             })}

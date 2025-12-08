@@ -56,6 +56,10 @@ const NAME_TO_ABBR: Record<string, string> = {
     "Arizona Cardinals": "ARI", "Los Angeles Rams": "LA", "San Francisco 49ers": "SF", "Seattle Seahawks": "SEA"
 };
 
+const ABBR_TO_NAME: Record<string, string> = Object.fromEntries(
+    Object.entries(NAME_TO_ABBR).map(([name, abbr]) => [abbr, name])
+);
+
 const MONTH_MAP: Record<number, string> = {
     0: 'JAN', 1: 'FEB', 2: 'MAR', 3: 'APR', 4: 'MAY', 5: 'JUN',
     6: 'JUL', 7: 'AUG', 8: 'SEP', 9: 'OCT', 10: 'NOV', 11: 'DEC'
@@ -156,4 +160,37 @@ export const fetchKalshiOdds = async (games: Game[]): Promise<Map<string, number
     }
     
     return oddsMap;
+};
+
+export const fetchKalshiPlayoffOdds = async (): Promise<Map<string, number>> => {
+    const playoffOdds = new Map<string, number>();
+
+    try {
+        const response = await axios.get(buildKalshiUrl('markets', {
+            limit: 100,
+            series_ticker: 'KXNFLPLAYOFF',
+            status: 'open',
+        }));
+        const markets = response.data.markets || [];
+
+        markets.forEach((m: any) => {
+            // Ticker format: KXNFLPLAYOFF-26-KC
+            const parts = m.ticker.split('-'); 
+            if (parts.length < 3) return;
+            const abbr = parts[parts.length - 1];
+            const teamName = ABBR_TO_NAME[abbr];
+            if (!teamName) return;
+            
+            if (m.last_price > 0) {
+                // last_price is 0-100
+                playoffOdds.set(teamName, m.last_price / 100);
+            }
+        });
+        
+        console.log(`Loaded Kalshi playoff odds for ${playoffOdds.size} teams`);
+    } catch (err) {
+        console.warn('Failed to fetch Kalshi playoff odds:', err);
+    }
+
+    return playoffOdds;
 };

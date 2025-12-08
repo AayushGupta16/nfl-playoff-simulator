@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback, useRef } from 'react';
 import { fetchSchedule, fetchStandings } from './services/nflService';
-import { fetchKalshiOdds } from './services/kalshiService';
+import { fetchKalshiOdds, fetchKalshiPlayoffOdds } from './services/kalshiService';
 import { applyEloOdds, createPreseasonEloMap } from './services/eloService';
 import type { Team, Game, SimulationResult } from './types';
 import { SimulationConfig } from './components/SimulationConfig';
@@ -23,7 +23,12 @@ function Simulator() {
   const [odds, setOdds] = useState<Map<string, number>>(new Map());
   // Pure Kalshi game-level odds used inside the simulation
   const [marketOdds, setMarketOdds] = useState<Map<string, number>>(new Map());
+  const [marketPlayoffOdds, setMarketPlayoffOdds] = useState<Map<string, number>>(new Map());
+  
   const [kalshiElos, setKalshiElos] = useState<Map<string, number>>(new Map());
+  const [calibrationDone, setCalibrationDone] = useState(false);
+  const [hasInitialRun, setHasInitialRun] = useState(false);
+
   const [simulatedOdds, setSimulatedOdds] = useState<Map<string, number>>(new Map());
   const [results, setResults] = useState<SimulationResult[]>([]);
   const [loadingData, setLoadingData] = useState(true);
@@ -48,18 +53,29 @@ function Simulator() {
     });
 
     workerRef.current.onmessage = (e) => {
-        const { type, results, simulatedOdds, error } = e.data;
-        if (type === 'SUCCESS') {
+        const { type, results, simulatedOdds, error, calibratedElos } = e.data;
+        
+        if (type === 'CALIBRATION_COMPLETE') {
+            if (calibratedElos) {
+                setKalshiElos(new Map(calibratedElos));
+                setCalibrationDone(true);
+                console.log('Calibration complete. New Elos applied.');
+            }
+            setSimulating(false);
+            // Note: Auto-run sim will be handled by the useEffect dependent on calibrationDone
+            
+        } else if (type === 'SUCCESS') {
             setResults(results);
             if (simulatedOdds) {
                 setSimulatedOdds(new Map(simulatedOdds));
             }
             setSimDuration(performance.now() - simStartTime.current);
-        } else {
+            setSimulating(false);
+        } else if (type === 'ERROR') {
             console.error("Worker Error:", error);
             setError("Simulation failed.");
+            setSimulating(false);
         }
-        setSimulating(false);
     };
 
     return () => {
@@ -75,6 +91,7 @@ function Simulator() {
         // Parallelize fetching:
         // Chain 1: Standings -> Kalshi Win Totals (Elo)
         // Chain 2: Schedule -> Kalshi Game Odds
+        // Chain 3: Kalshi Playoff Odds
         
         const standingsPromise = fetchStandings();
         const schedulePromise = fetchSchedule();
@@ -94,11 +111,15 @@ function Simulator() {
             return { games: fetchedGames, kalshiOdds };
         });
 
-        // Wait for both chains
+        // Chain 3: Playoff Odds
+        const playoffOddsPromise = fetchKalshiPlayoffOdds();
+
+        // Wait for all chains
         const [
             { teams: fetchedTeams, eloMap },
-            { games: fetchedGames, kalshiOdds }
-        ] = await Promise.all([eloPromise, oddsPromise]);
+            { games: fetchedGames, kalshiOdds },
+            playoffOdds
+        ] = await Promise.all([eloPromise, oddsPromise, playoffOddsPromise]);
 
         if (fetchedTeams.length === 0) {
           setError("Failed to load team data. Please check your connection.");
@@ -109,11 +130,13 @@ function Simulator() {
         
         console.log(`Kalshi odds loaded for ${kalshiOdds.size} games`);
         console.log(`Kalshi Win Totals (Current Elo) loaded for ${eloMap.size} teams`);
+        console.log(`Kalshi Playoff Odds loaded for ${playoffOdds.size} teams`);
         
         setKalshiElos(eloMap);
         
         // Remember pure Kalshi odds for simulation
         setMarketOdds(kalshiOdds);
+        setMarketPlayoffOdds(playoffOdds);
 
         // Apply Elo-based odds as fallback for games without Kalshi odds (Week 16-18)
         const eloFallbackOdds = applyEloOdds(fetchedGames, fetchedTeams, kalshiOdds);
@@ -150,6 +173,7 @@ function Simulator() {
     
     // Send data to worker
     workerRef.current.postMessage({
+        action: 'SIMULATE',
         teams,
         games,
         count,
@@ -161,15 +185,51 @@ function Simulator() {
     });
   }, [teams, games, marketOdds, userPicks, kalshiElos]);
 
+  // New auto-calibration useEffect
+  useEffect(() => {
+    if (loadingData) return;
+    if (calibrationDone) return;
+    if (!workerRef.current) return;
+    if (teams.length === 0 || games.length === 0) return;
+
+    if (marketPlayoffOdds.size === 0) {
+        // No playoff markets → mark done, use win-total Elo only.
+        setCalibrationDone(true);
+        return;
+    }
+
+    console.log("Starting Elo calibration to match Kalshi playoff odds...");
+    setSimulating(true);
+
+    workerRef.current.postMessage({
+        action: 'CALIBRATE',
+        teams,
+        games,
+        count: 1000, // documented but not used except for clarity
+        odds: Array.from(marketOdds.entries()),
+        userPicks: Array.from(userPicks.entries()),
+        kalshiElos: Array.from(kalshiElos.entries()),
+        targetPlayoffOdds: Array.from(marketPlayoffOdds.entries()),
+    });
+  }, [loadingData, calibrationDone, teams, games, marketOdds, userPicks, kalshiElos, marketPlayoffOdds]);
+
   // Auto-run whenever user picks change
   useEffect(() => {
-    if (!loadingData && teams.length > 0) {
-        const timer = setTimeout(() => {
-            handleRunSimulation(simCount); 
-        }, 500);
-        return () => clearTimeout(timer);
-    }
-  }, [userPicks, loadingData, handleRunSimulation, teams.length, simCount]);
+    if (loadingData) return;
+    if (teams.length === 0) return;
+
+    // If we have playoff odds, wait for calibration to complete
+    if (marketPlayoffOdds.size > 0 && !calibrationDone) return;
+
+    // If no picks and we've already done the initial run, do nothing.
+    if (hasInitialRun && userPicks.size === 0) return;
+
+    const timer = setTimeout(() => {
+        handleRunSimulation(simCount); 
+        if (!hasInitialRun) setHasInitialRun(true);
+    }, 500);
+    return () => clearTimeout(timer);
+  }, [userPicks, loadingData, handleRunSimulation, teams.length, simCount, calibrationDone, marketPlayoffOdds, hasInitialRun]);
 
   const handlePick = (gameId: string, winnerId: string | null) => {
       setUserPicks(prev => {
@@ -258,7 +318,12 @@ function Simulator() {
               />
               
               <div className="flex-1 min-h-0">
-                 <Results results={results} teams={teams} simDuration={simDuration} />
+                 <Results 
+                    results={results} 
+                    teams={teams} 
+                    simDuration={simDuration} 
+                    marketPlayoffOdds={marketPlayoffOdds}
+                 />
                 </div>
             </div>
           </div>

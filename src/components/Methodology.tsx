@@ -45,7 +45,7 @@ export const Methodology: React.FC = () => {
               </div>
 
               <div className="bg-slate-50 p-4 rounded-lg border border-slate-200">
-                <h3 className="font-bold text-slate-900 mb-1">2. Kalshi-Implied Elo</h3>
+                <h3 className="font-bold text-slate-900 mb-1">2. Kalshi-Implied Elo (Win Totals)</h3>
                 <p className="text-sm text-slate-600 mb-3">
                   For future games without markets (e.g. Week 18), the simulator calculates win probability using a "Kalshi-Implied Elo." This is derived directly from each team's <strong>Season Win Total</strong> market.
                 </p>
@@ -58,7 +58,17 @@ export const Methodology: React.FC = () => {
               </div>
 
               <div className="bg-slate-50 p-4 rounded-lg border border-slate-200">
-                <h3 className="font-bold text-slate-900 mb-1">3. Dynamic Simulation (Momentum)</h3>
+                <h3 className="font-bold text-slate-900 mb-1">3. Playoff Odds Calibration</h3>
+                <p className="text-sm text-slate-600 mb-3">
+                  Before running the main simulation, we automatically calibrate team Elos to match Kalshi's <strong>"Make Playoffs"</strong> markets.
+                </p>
+                <p className="text-sm text-slate-600">
+                  We run several quick passes of 1,000 simulations in the background. After each pass, if a team's simulated playoff probability differs from their market price, we nudge their Elo rating up or down until they align. This ensures the simulator's unconditional results match the market, while maintaining coherent "what-if" scenarios for user picks.
+                </p>
+              </div>
+
+              <div className="bg-slate-50 p-4 rounded-lg border border-slate-200">
+                <h3 className="font-bold text-slate-900 mb-1">4. Dynamic Simulation (Momentum)</h3>
                 <p className="text-sm text-slate-600 mb-3">
                   The simulator runs through the remaining schedule week-by-week. After every simulated game, it updates the winner's Elo rating slightly (and lowers the loser's).
                 </p>
@@ -101,7 +111,7 @@ export const Methodology: React.FC = () => {
               </div>
             </div>
             <p className="text-xs text-slate-500 mt-4">
-              I skip the later point-based and \"combined ranking\" tiebreaker steps from the official rules (various net-points rules, net touchdowns). Those are rare edge cases in practice.
+              I skip the later point-based and "combined ranking" tiebreaker steps from the official rules (various net-points rules, net touchdowns). Those are rare edge cases in practice.
             </p>
           </section>
 
