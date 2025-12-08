@@ -272,6 +272,7 @@ export const Results: React.FC<Props> = ({
                                                         prob={prob}
                                                         userPick={userPicks.get(game.id)}
                                                         onPick={onPick}
+                                                        contextTeamId={res.teamId}
                                                     />
                                                 </div>
                                             </div>
