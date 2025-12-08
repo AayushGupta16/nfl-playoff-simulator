@@ -323,6 +323,11 @@ function Simulator() {
                     teams={teams} 
                     simDuration={simDuration} 
                     marketPlayoffOdds={marketPlayoffOdds}
+                    games={games}
+                    odds={odds}
+                    simulatedOdds={simulatedOdds}
+                    userPicks={userPicks}
+                    onPick={handlePick}
                  />
                 </div>
             </div>

@@ -1,21 +1,39 @@
 import React, { useState, useMemo } from 'react';
-import type { SimulationResult, Team } from '../types';
+import type { SimulationResult, Team, Game } from '../types';
 import { clsx } from 'clsx';
 import { TeamIcon } from './TeamLogo';
+import { GameCard } from './GameCard';
+import { ChevronDown, ChevronRight } from 'lucide-react';
 
 interface Props {
   results: SimulationResult[];
   teams: Team[]; // For logos
   simDuration?: number | null;
   marketPlayoffOdds?: Map<string, number>;
+  games: Game[];
+  odds: Map<string, number>;
+  simulatedOdds?: Map<string, number>;
+  userPicks: Map<string, string>;
+  onPick: (gameId: string, winnerId: string | null) => void;
 }
 
 type SortField = 'name' | 'prob' | 'div' | 'seed1' | 'wc';
 
-export const Results: React.FC<Props> = ({ results, teams, simDuration, marketPlayoffOdds }) => {
+export const Results: React.FC<Props> = ({ 
+    results, 
+    teams, 
+    simDuration, 
+    marketPlayoffOdds,
+    games,
+    odds,
+    simulatedOdds,
+    userPicks,
+    onPick
+}) => {
   const [sortField, setSortField] = useState<SortField>('prob');
   const [sortDesc, setSortDesc] = useState(true);
   const [conferenceFilter, setConferenceFilter] = useState<'ALL' | 'AFC' | 'NFC'>('ALL');
+  const [expandedTeamId, setExpandedTeamId] = useState<string | null>(null);
 
   const teamMap = useMemo(() => new Map(teams.map(t => [t.id, t])), [teams]);
 
@@ -69,6 +87,10 @@ export const Results: React.FC<Props> = ({ results, teams, simDuration, marketPl
       setSortField(field);
       setSortDesc(true); // Default desc
     }
+  };
+
+  const toggleTeamExpansion = (teamId: string) => {
+    setExpandedTeamId(prev => prev === teamId ? null : teamId);
   };
 
   if (results.length === 0) return null;
@@ -159,9 +181,16 @@ export const Results: React.FC<Props> = ({ results, teams, simDuration, marketPl
               };
 
               return (
-                <tr key={res.teamId} className="hover:bg-slate-50 group">
+                <React.Fragment key={res.teamId}>
+                <tr 
+                    className={clsx("hover:bg-slate-50 group cursor-pointer transition-colors", expandedTeamId === res.teamId && "bg-slate-50")}
+                    onClick={() => toggleTeamExpansion(res.teamId)}
+                >
                   <td className="px-4 py-2.5">
                      <div className="flex items-center gap-3">
+                        <div className="text-slate-400">
+                             {expandedTeamId === res.teamId ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
+                        </div>
                         <TeamIcon url={team?.logo} name={res.teamName} size="sm" />
                         <div className="min-w-0">
                             <span className="font-bold text-slate-800 block leading-none truncate">{res.teamName}</span>
@@ -209,6 +238,52 @@ export const Results: React.FC<Props> = ({ results, teams, simDuration, marketPl
                      </div>
                   </td>
             </tr>
+            {expandedTeamId === res.teamId && (
+                <tr className="bg-slate-50/50">
+                    <td colSpan={7} className="px-0 sm:px-4 py-2 border-b border-slate-100">
+                        <div className="bg-white border border-slate-200 rounded-lg overflow-hidden shadow-sm mx-2 sm:mx-0 my-1">
+                            <div className="bg-slate-50 px-3 py-2 border-b border-slate-100 flex items-center justify-between">
+                                <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">Remaining Schedule</span>
+                            </div>
+                            <div className="divide-y divide-slate-100">
+                                {(() => {
+                                    const teamGames = games
+                                        .filter(g => !g.isFinished && (g.homeTeamId === res.teamId || g.awayTeamId === res.teamId))
+                                        .sort((a, b) => a.week - b.week);
+                                    
+                                    if (teamGames.length === 0) {
+                                        return <div className="p-4 text-center text-slate-400 text-sm">No remaining games</div>;
+                                    }
+
+                                    return teamGames.map(game => {
+                                         const prob = simulatedOdds?.get(game.id) ?? odds.get(game.id) ?? game.homeWinProb ?? 0.5;
+                                         return (
+                                            <div key={game.id} className="relative">
+                                                <div className="absolute left-0 top-0 bottom-0 w-6 bg-slate-50 border-r border-slate-100 flex items-center justify-center">
+                                                    <span className="text-[10px] font-bold text-slate-400 -rotate-90 whitespace-nowrap">
+                                                        W{game.week}
+                                                    </span>
+                                                </div>
+                                                <div className="pl-6">
+                                                    <GameCard
+                                                        game={game}
+                                                        homeTeam={teamMap.get(game.homeTeamId)}
+                                                        awayTeam={teamMap.get(game.awayTeamId)}
+                                                        prob={prob}
+                                                        userPick={userPicks.get(game.id)}
+                                                        onPick={onPick}
+                                                    />
+                                                </div>
+                                            </div>
+                                         );
+                                    });
+                                })()}
+                            </div>
+                        </div>
+                    </td>
+                </tr>
+            )}
+            </React.Fragment>
               );
             })}
         </tbody>
