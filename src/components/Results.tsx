@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import type { SimulationResult, Team, Game } from '../types';
 import { clsx } from 'clsx';
 import { TeamIcon } from './TeamLogo';
@@ -36,6 +36,24 @@ export const Results: React.FC<Props> = ({
   const [expandedTeamId, setExpandedTeamId] = useState<string | null>(null);
 
   const teamMap = useMemo(() => new Map(teams.map(t => [t.id, t])), [teams]);
+  const expandedRowRef = useRef<HTMLTableRowElement | null>(null);
+  const prevResultsRef = useRef<SimulationResult[] | null>(null);
+
+  // If a team is expanded (focus mode) and new results come in (after a pick),
+  // keep that team in view even if sorting causes the row to move.
+  useEffect(() => {
+    const prev = prevResultsRef.current;
+    prevResultsRef.current = results;
+
+    if (!expandedTeamId) return;
+    if (!prev) return; // initial render
+    if (prev === results) return;
+
+    const row = expandedRowRef.current;
+    if (!row) return;
+
+    row.scrollIntoView({ block: 'center', behavior: 'smooth' });
+  }, [results, expandedTeamId]);
 
   // Filter by Conference
   const filteredResults = useMemo(() => {
@@ -185,6 +203,7 @@ export const Results: React.FC<Props> = ({
                 <tr 
                     className={clsx("hover:bg-slate-50 group cursor-pointer transition-colors", expandedTeamId === res.teamId && "bg-slate-50")}
                     onClick={() => toggleTeamExpansion(res.teamId)}
+                    ref={expandedTeamId === res.teamId ? expandedRowRef : null}
                 >
                   <td className="px-4 py-2.5">
                      <div className="flex items-center gap-3">
