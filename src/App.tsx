@@ -221,9 +221,6 @@ function Simulator() {
     // If we have playoff odds, wait for calibration to complete
     if (marketPlayoffOdds.size > 0 && !calibrationDone) return;
 
-    // If no picks and we've already done the initial run, do nothing.
-    if (hasInitialRun && userPicks.size === 0) return;
-
     const timer = setTimeout(() => {
         handleRunSimulation(simCount); 
         if (!hasInitialRun) setHasInitialRun(true);
