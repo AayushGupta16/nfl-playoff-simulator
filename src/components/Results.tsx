@@ -111,6 +111,14 @@ export const Results: React.FC<Props> = ({
     setExpandedTeamId(prev => prev === teamId ? null : teamId);
   };
 
+  const formatCompactProb = (prob: number) => {
+    const val = prob * 100;
+    if (val === 0) return '-';
+    if (val > 99) return '>99%';
+    if (val < 1 && val > 0) return '<1%';
+    return `${val.toFixed(0)}%`;
+  };
+
   if (results.length === 0) return null;
 
   return (
@@ -178,6 +186,7 @@ export const Results: React.FC<Props> = ({
               const team = teamMap.get(res.teamId);
               const probPct = (res.playoffProb * 100).toFixed(0);
               const probVal = res.playoffProb * 100;
+              const hasMarket = !!marketPlayoffOdds && marketPlayoffOdds.size > 0;
               
               // Helper for column cells
               const renderProbCell = (prob: number) => {
@@ -214,6 +223,29 @@ export const Results: React.FC<Props> = ({
                         <div className="min-w-0">
                             <span className="font-bold text-slate-800 block leading-none truncate">{res.teamName}</span>
                             <span className="text-[10px] text-slate-400 font-mono">{team?.wins}-{team?.losses}</span>
+                            {/* Mobile: Compact stats grid */}
+                            <div className="sm:hidden flex items-center gap-3 mt-2 border-t border-slate-50 pt-1.5">
+                                <div className="flex flex-col">
+                                    <span className="text-[9px] uppercase tracking-wider text-slate-400 font-bold mb-0.5">Div</span>
+                                    <span className={clsx("text-xs leading-none tabular-nums", res.divisionProb > 0.99 ? "text-green-600 font-bold" : res.divisionProb >= 0.5 ? "text-slate-900 font-semibold" : "text-slate-500 font-medium")}>
+                                        {formatCompactProb(res.divisionProb)}
+                                    </span>
+                                </div>
+                                <div className="w-px h-6 bg-slate-100" />
+                                <div className="flex flex-col">
+                                    <span className="text-[9px] uppercase tracking-wider text-slate-400 font-bold mb-0.5">WC</span>
+                                    <span className={clsx("text-xs leading-none tabular-nums", res.wildcardProb > 0.99 ? "text-green-600 font-bold" : res.wildcardProb >= 0.5 ? "text-slate-900 font-semibold" : "text-slate-500 font-medium")}>
+                                        {formatCompactProb(res.wildcardProb)}
+                                    </span>
+                                </div>
+                                <div className="w-px h-6 bg-slate-100" />
+                                <div className="flex flex-col">
+                                    <span className="text-[9px] uppercase tracking-wider text-slate-400 font-bold mb-0.5">1st</span>
+                                    <span className={clsx("text-xs leading-none tabular-nums", res.firstSeedProb > 0.99 ? "text-green-600 font-bold" : res.firstSeedProb >= 0.5 ? "text-slate-900 font-semibold" : "text-slate-500 font-medium")}>
+                                        {formatCompactProb(res.firstSeedProb)}
+                                    </span>
+                                </div>
+                            </div>
                         </div>
                      </div>
                   </td>
@@ -228,7 +260,7 @@ export const Results: React.FC<Props> = ({
                       {renderProbCell(res.firstSeedProb)}
                   </td>
                   
-                  {marketPlayoffOdds && marketPlayoffOdds.size > 0 && (
+                  {hasMarket && (
                     <td className="px-2 py-2.5 text-right hidden sm:table-cell border-l border-slate-100 bg-slate-50/10">
                         {(() => {
                         const marketProb =
@@ -259,7 +291,7 @@ export const Results: React.FC<Props> = ({
             </tr>
             {expandedTeamId === res.teamId && (
                 <tr className="bg-slate-50/50">
-                    <td colSpan={7} className="px-0 sm:px-4 py-2 border-b border-slate-100">
+                    <td colSpan={hasMarket ? 6 : 5} className="px-0 sm:px-4 py-2 border-b border-slate-100">
                         <div className="bg-white border border-slate-200 rounded-lg overflow-hidden shadow-sm mx-2 sm:mx-0 my-1">
                             <div className="bg-slate-50 px-3 py-2 border-b border-slate-100 flex items-center justify-between">
                                 <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">Remaining Schedule</span>
