@@ -3,6 +3,7 @@ import type { Game, Team } from '../types';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 import { TeamIcon } from './TeamLogo';
+import { getShortTeamName } from '../utils/teamNames';
 
 function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
@@ -34,6 +35,8 @@ export const GameCard: React.FC<Props> = ({ game, homeTeam, awayTeam, prob, user
   const rightTeam = shouldSwap ? awayTeam : homeTeam;
   const leftTeamName = shouldSwap ? game.homeTeamName : game.awayTeamName;
   const rightTeamName = shouldSwap ? game.awayTeamName : game.homeTeamName;
+  const leftTeamNameMobile = getShortTeamName(leftTeamName);
+  const rightTeamNameMobile = getShortTeamName(rightTeamName);
   const leftTeamId = shouldSwap ? game.homeTeamId : game.awayTeamId;
   const rightTeamId = shouldSwap ? game.awayTeamId : game.homeTeamId;
   const isLeftPicked = shouldSwap ? isHomePicked : isAwayPicked;
@@ -51,8 +54,9 @@ export const GameCard: React.FC<Props> = ({ game, homeTeam, awayTeam, prob, user
             <div className="flex items-center gap-2 flex-1 min-w-0">
                 <TeamIcon url={leftTeam?.logo} name={leftTeamName} size="sm" />
                 <div className="flex flex-col min-w-0">
-                    <span className={cn("font-medium truncate block leading-tight", isLeftPicked ? "text-slate-900 font-bold" : "text-slate-600")}>
-                        {leftTeamName}
+                    <span className={cn("font-medium block leading-tight sm:truncate", isLeftPicked ? "text-slate-900 font-bold" : "text-slate-600")}>
+                        <span className="sm:hidden">{leftTeamNameMobile}</span>
+                        <span className="hidden sm:inline">{leftTeamName}</span>
                     </span>
                     {contextTeamId && (
                         <span className={cn(
@@ -115,8 +119,9 @@ export const GameCard: React.FC<Props> = ({ game, homeTeam, awayTeam, prob, user
             {/* Right */}
             <div className="flex items-center gap-2 flex-1 justify-end min-w-0">
                 <div className="flex flex-col items-end min-w-0">
-                    <span className={cn("font-medium truncate block text-right leading-tight", isRightPicked ? "text-slate-900 font-bold" : "text-slate-600")}>
-                        {rightTeamName}
+                    <span className={cn("font-medium block text-right leading-tight sm:truncate", isRightPicked ? "text-slate-900 font-bold" : "text-slate-600")}>
+                        <span className="sm:hidden">{rightTeamNameMobile}</span>
+                        <span className="hidden sm:inline">{rightTeamName}</span>
                     </span>
                     {contextTeamId && (
                         <span className={cn(
