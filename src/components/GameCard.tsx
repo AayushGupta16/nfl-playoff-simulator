@@ -44,89 +44,137 @@ export const GameCard: React.FC<Props> = ({ game, homeTeam, awayTeam, prob, user
   const rightIsHome = shouldSwap ? false : true;
   
   return (
-    <div className="flex items-center justify-between py-3 px-2 border-b border-slate-100 hover:bg-slate-50 transition-colors group text-sm">
-        
-        {/* Left Team Section */}
-        <div className="flex items-center gap-2 flex-1 min-w-0">
-            <TeamIcon url={leftTeam?.logo} name={leftTeamName} size="sm" />
-            <div className="flex flex-col min-w-0">
-                <span className={cn("font-medium truncate", isLeftPicked ? "text-slate-900 font-bold" : "text-slate-600")}>
-                    {leftTeamName}
-                </span>
-                {contextTeamId && (
-                    <span className={cn(
-                        "text-[9px] uppercase font-bold tracking-wide",
-                        leftIsHome ? "text-blue-500" : "text-orange-500"
-                    )}>
-                        {leftIsHome ? "Home" : "Away"}
+    <div className="py-3 px-2 border-b border-slate-100 hover:bg-slate-50 transition-colors group text-sm">
+        {/* Mobile-first: teams on top row, controls on second row */}
+        <div className="flex items-center justify-between gap-2 sm:gap-3">
+            {/* Left */}
+            <div className="flex items-center gap-2 flex-1 min-w-0">
+                <TeamIcon url={leftTeam?.logo} name={leftTeamName} size="sm" />
+                <div className="flex flex-col min-w-0">
+                    <span className={cn("font-medium truncate block leading-tight", isLeftPicked ? "text-slate-900 font-bold" : "text-slate-600")}>
+                        {leftTeamName}
                     </span>
-                )}
+                    {contextTeamId && (
+                        <span className={cn(
+                            "text-[9px] uppercase font-bold tracking-wide leading-none",
+                            leftIsHome ? "text-blue-500" : "text-orange-500"
+                        )}>
+                            {leftIsHome ? "Home" : "Away"}
+                        </span>
+                    )}
+                </div>
+            </div>
+
+            {/* Desktop Interaction Area */}
+            <div className="hidden sm:flex items-center gap-2 mx-2 shrink-0">
+                {/* Left Checkbox */}
+                <button
+                    onClick={() => onPick(game.id, isLeftPicked ? null : leftTeamId)}
+                    className={cn(
+                        "w-6 h-6 rounded border flex items-center justify-center transition-all",
+                        isLeftPicked
+                            ? "bg-slate-800 border-slate-800 text-white"
+                            : "bg-white border-slate-300 hover:border-slate-400 text-transparent"
+                    )}
+                    aria-label={`Pick ${leftTeamName}`}
+                >
+                    <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                    </svg>
+                </button>
+
+                {/* Probability Visualization */}
+                <div className="flex flex-col items-center w-12 gap-0.5">
+                    <div className="flex w-full h-1.5 bg-slate-200 rounded-full overflow-hidden">
+                        <div className={cn("h-full", leftIsHome ? "bg-blue-600" : "bg-orange-400")} style={{ width: `${leftProbPct}%` }} />
+                        <div className={cn("h-full", rightIsHome ? "bg-blue-600" : "bg-orange-400")} style={{ width: `${rightProbPct}%` }} />
+                    </div>
+                    <div className="flex justify-between w-full text-[10px] text-slate-400 font-mono leading-none">
+                        <span>{leftProbPct}</span>
+                        <span>{rightProbPct}</span>
+                    </div>
+                </div>
+
+                {/* Right Checkbox */}
+                <button
+                    onClick={() => onPick(game.id, isRightPicked ? null : rightTeamId)}
+                    className={cn(
+                        "w-6 h-6 rounded border flex items-center justify-center transition-all",
+                        isRightPicked
+                            ? "bg-slate-800 border-slate-800 text-white"
+                            : "bg-white border-slate-300 hover:border-slate-400 text-transparent"
+                    )}
+                    aria-label={`Pick ${rightTeamName}`}
+                >
+                    <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                    </svg>
+                </button>
+            </div>
+
+            {/* Right */}
+            <div className="flex items-center gap-2 flex-1 justify-end min-w-0">
+                <div className="flex flex-col items-end min-w-0">
+                    <span className={cn("font-medium truncate block text-right leading-tight", isRightPicked ? "text-slate-900 font-bold" : "text-slate-600")}>
+                        {rightTeamName}
+                    </span>
+                    {contextTeamId && (
+                        <span className={cn(
+                            "text-[9px] uppercase font-bold tracking-wide leading-none",
+                            rightIsHome ? "text-blue-500" : "text-orange-500"
+                        )}>
+                            {rightIsHome ? "Home" : "Away"}
+                        </span>
+                    )}
+                </div>
+                <TeamIcon url={rightTeam?.logo} name={rightTeamName} size="sm" />
             </div>
         </div>
 
-        {/* Interaction Area */}
-        <div className="flex items-center gap-2 mx-2 shrink-0">
-             {/* Left Checkbox */}
+        {/* Mobile Controls Row (checkboxes directly under team names) */}
+        <div className="sm:hidden mt-2 flex items-center gap-2">
             <button
                 onClick={() => onPick(game.id, isLeftPicked ? null : leftTeamId)}
                 className={cn(
-                    "w-6 h-6 rounded border flex items-center justify-center transition-all",
-                    isLeftPicked 
-                        ? "bg-slate-800 border-slate-800 text-white" 
+                    "w-9 h-9 rounded-lg border flex items-center justify-center transition-all shrink-0",
+                    isLeftPicked
+                        ? "bg-slate-800 border-slate-800 text-white"
                         : "bg-white border-slate-300 hover:border-slate-400 text-transparent"
                 )}
                 aria-label={`Pick ${leftTeamName}`}
             >
-                <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
                     <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
                 </svg>
             </button>
 
-            {/* Probability Visualization (Split Dot/Bar) */}
-            <div className="flex flex-col items-center w-12 gap-0.5">
-                <div className="flex w-full h-1.5 bg-slate-200 rounded-full overflow-hidden">
-                    <div className={cn("h-full", leftIsHome ? "bg-blue-600" : "bg-orange-400")} style={{ width: `${leftProbPct}%` }} />
-                    <div className={cn("h-full", rightIsHome ? "bg-blue-600" : "bg-orange-400")} style={{ width: `${rightProbPct}%` }} />
-                </div>
-                <div className="flex justify-between w-full text-[10px] text-slate-400 font-mono leading-none">
-                    <span>{leftProbPct}</span>
-                    <span>{rightProbPct}</span>
+            <div className="flex-1 flex justify-center">
+                <div className="flex flex-col items-center w-44 max-w-full gap-0.5">
+                    <div className="flex w-full h-2 bg-slate-200 rounded-full overflow-hidden">
+                        <div className={cn("h-full", leftIsHome ? "bg-blue-600" : "bg-orange-400")} style={{ width: `${leftProbPct}%` }} />
+                        <div className={cn("h-full", rightIsHome ? "bg-blue-600" : "bg-orange-400")} style={{ width: `${rightProbPct}%` }} />
+                    </div>
+                    <div className="flex justify-between w-full text-[10px] text-slate-400 font-mono leading-none">
+                        <span>{leftProbPct}</span>
+                        <span>{rightProbPct}</span>
+                    </div>
                 </div>
             </div>
 
-            {/* Right Checkbox */}
             <button
                 onClick={() => onPick(game.id, isRightPicked ? null : rightTeamId)}
                 className={cn(
-                    "w-6 h-6 rounded border flex items-center justify-center transition-all",
-                    isRightPicked 
-                        ? "bg-slate-800 border-slate-800 text-white" 
+                    "w-9 h-9 rounded-lg border flex items-center justify-center transition-all shrink-0",
+                    isRightPicked
+                        ? "bg-slate-800 border-slate-800 text-white"
                         : "bg-white border-slate-300 hover:border-slate-400 text-transparent"
                 )}
                 aria-label={`Pick ${rightTeamName}`}
             >
-                 <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
                     <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
                 </svg>
             </button>
-        </div>
-
-        {/* Right Team Section */}
-        <div className="flex items-center gap-2 flex-1 justify-end min-w-0">
-            <div className="flex flex-col items-end min-w-0">
-                <span className={cn("font-medium truncate text-right", isRightPicked ? "text-slate-900 font-bold" : "text-slate-600")}>
-                    {rightTeamName}
-                </span>
-                {contextTeamId && (
-                    <span className={cn(
-                        "text-[9px] uppercase font-bold tracking-wide",
-                        rightIsHome ? "text-blue-500" : "text-orange-500"
-                    )}>
-                        {rightIsHome ? "Home" : "Away"}
-                    </span>
-                )}
-            </div>
-            <TeamIcon url={rightTeam?.logo} name={rightTeamName} size="sm" />
         </div>
     </div>
   );

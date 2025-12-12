@@ -278,12 +278,12 @@ export const Results: React.FC<Props> = ({
                                          const prob = simulatedOdds?.get(game.id) ?? odds.get(game.id) ?? game.homeWinProb ?? 0.5;
                                          return (
                                             <div key={game.id} className="relative">
-                                                <div className="absolute left-0 top-0 bottom-0 w-6 bg-slate-50 border-r border-slate-100 flex items-center justify-center">
+                                                <div className="absolute left-0 top-0 bottom-0 w-5 sm:w-6 bg-slate-50 border-r border-slate-100 flex items-center justify-center">
                                                     <span className="text-[10px] font-bold text-slate-400 -rotate-90 whitespace-nowrap">
                                                         W{game.week}
                                                     </span>
                                                 </div>
-                                                <div className="pl-6">
+                                                <div className="pl-5 sm:pl-6">
                                                     <GameCard
                                                         game={game}
                                                         homeTeam={teamMap.get(game.homeTeamId)}
