@@ -46,10 +46,19 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     res.setHeader('Access-Control-Allow-Origin', '*');
     res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
     res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+
+    // Edge caching: Kalshi market data changes, but short s-maxage helps "most users"
+    // by letting Vercel serve hot responses at the edge while keeping data reasonably fresh.
+    if (response.ok) {
+      res.setHeader('Cache-Control', 'public, s-maxage=20, stale-while-revalidate=60');
+    } else {
+      res.setHeader('Cache-Control', 'no-store');
+    }
     
     return res.status(response.status).json(data);
   } catch (error) {
     console.error('Kalshi proxy error:', error);
+    res.setHeader('Cache-Control', 'no-store');
     return res.status(500).json({ error: 'Failed to fetch from Kalshi API', details: String(error) });
   }
 }

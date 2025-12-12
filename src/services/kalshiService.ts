@@ -44,6 +44,38 @@ const buildKalshiUrl = (endpoint: string, params?: Record<string, string | numbe
     }
 };
 
+type KalshiMarket = any;
+
+const fetchAllOpenMarkets = async (
+    seriesTicker: string,
+): Promise<KalshiMarket[]> => {
+    let allMarkets: KalshiMarket[] = [];
+    let cursor: string | undefined = undefined;
+    let pageCount = 0;
+    const MAX_PAGES = 10;
+
+    do {
+        const params: Record<string, string | number> = {
+            limit: 200,
+            status: 'open',
+            series_ticker: seriesTicker
+        };
+        if (cursor) params.cursor = cursor;
+
+        const response = await axios.get(buildKalshiUrl('markets', params));
+        const data = response.data;
+
+        if (data.markets) {
+            allMarkets = allMarkets.concat(data.markets);
+        }
+
+        cursor = data.cursor;
+        pageCount++;
+    } while (cursor && pageCount < MAX_PAGES);
+
+    return allMarkets;
+};
+
 // Map full team names to Kalshi abbreviations
 const NAME_TO_ABBR: Record<string, string> = {
     "Buffalo Bills": "BUF", "Miami Dolphins": "MIA", "New England Patriots": "NE", "New York Jets": "NYJ",
@@ -88,31 +120,8 @@ export const fetchKalshiOdds = async (games: Game[]): Promise<Map<string, number
     
     try {
         console.log("Fetching Kalshi KXNFLGAME (moneyline) markets...");
-        
-        // Fetch all open KXNFLGAME markets
-        let allMarkets: any[] = [];
-        let cursor: string | undefined = undefined;
-        let pageCount = 0;
-        const MAX_PAGES = 10;
-        
-        do {
-            const params: Record<string, string | number> = {
-                limit: 200,
-                status: 'open',
-                series_ticker: 'KXNFLGAME'
-            };
-            if (cursor) params.cursor = cursor;
-            
-            const response = await axios.get(buildKalshiUrl('markets', params));
-            const data = response.data;
-            
-            if (data.markets) {
-                allMarkets = allMarkets.concat(data.markets);
-            }
-            
-            cursor = data.cursor;
-            pageCount++;
-        } while (cursor && pageCount < MAX_PAGES);
+
+        const allMarkets = await fetchAllOpenMarkets('KXNFLGAME');
         
         console.log(`Loaded ${allMarkets.length} moneyline markets from Kalshi`);
         
@@ -166,12 +175,7 @@ export const fetchKalshiPlayoffOdds = async (): Promise<Map<string, number>> => 
     const playoffOdds = new Map<string, number>();
 
     try {
-        const response = await axios.get(buildKalshiUrl('markets', {
-            limit: 100,
-            series_ticker: 'KXNFLPLAYOFF',
-            status: 'open',
-        }));
-        const markets = response.data.markets || [];
+        const markets = await fetchAllOpenMarkets('KXNFLPLAYOFF');
 
         markets.forEach((m: any) => {
             // Ticker format: KXNFLPLAYOFF-26-KC

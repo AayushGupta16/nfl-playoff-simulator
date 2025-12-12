@@ -83,8 +83,7 @@ function Simulator() {
     };
   }, []);
 
-  useEffect(() => {
-    const loadData = async () => {
+  const loadData = useCallback(async () => {
       try {
         console.log("Fetching NFL data...");
         
@@ -159,10 +158,11 @@ function Simulator() {
       } finally {
         setLoadingData(false);
       }
-    };
-
-    loadData();
   }, []);
+
+  useEffect(() => {
+    loadData();
+  }, [loadData]);
 
   const handleRunSimulation = useCallback((count: number) => {
     if (teams.length === 0 || games.length === 0 || !workerRef.current) return;
