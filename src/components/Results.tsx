@@ -222,7 +222,9 @@ export const Results: React.FC<Props> = ({
                         <TeamIcon url={team?.logo} name={res.teamName} size="sm" />
                         <div className="min-w-0">
                             <span className="font-bold text-slate-800 block leading-none truncate">{res.teamName}</span>
-                            <span className="text-[10px] text-slate-400 font-mono">{team?.wins}-{team?.losses}</span>
+                            <span className="text-[10px] text-slate-400 font-mono">
+                                {team?.wins}-{team?.losses}{team?.ties ? `-${team.ties}` : ''}
+                            </span>
                             {/* Mobile: Compact stats grid */}
                             <div className="sm:hidden flex items-center gap-3 mt-2 border-t border-slate-50 pt-1.5">
                                 <div className="flex flex-col">
