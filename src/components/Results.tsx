@@ -4,7 +4,6 @@ import { clsx } from 'clsx';
 import { TeamIcon } from './TeamLogo';
 import { GameCard } from './GameCard';
 import { ChevronDown, ChevronRight } from 'lucide-react';
-import { getShortTeamName } from '../utils/teamNames';
 
 interface Props {
   results: SimulationResult[];
@@ -222,10 +221,7 @@ export const Results: React.FC<Props> = ({
                         </div>
                         <TeamIcon url={team?.logo} name={res.teamName} size="sm" />
                         <div className="min-w-0">
-                            <span className="font-bold text-slate-800 block leading-none sm:truncate">
-                                <span className="sm:hidden">{getShortTeamName(res.teamName)}</span>
-                                <span className="hidden sm:inline">{res.teamName}</span>
-                            </span>
+                            <span className="font-bold text-slate-800 block leading-none truncate">{res.teamName}</span>
                             <span className="text-[10px] text-slate-400 font-mono">
                                 {team?.wins}-{team?.losses}{team?.ties ? `-${team.ties}` : ''}
                             </span>
