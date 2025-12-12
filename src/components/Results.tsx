@@ -123,12 +123,12 @@ export const Results: React.FC<Props> = ({
 
   return (
     <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden flex flex-col h-full">
-      <div className="px-4 py-3 border-b border-slate-100 bg-slate-50/50 flex justify-between items-center">
-        <div className="flex items-center gap-2">
+      <div className="px-4 py-3 border-b border-slate-100 bg-slate-50/50 flex flex-col sm:flex-row sm:items-center justify-between gap-y-2 sm:gap-y-0">
+        <div className="flex items-center justify-between w-full sm:w-auto sm:justify-start">
             <h2 className="text-sm font-bold text-slate-700 uppercase tracking-wider">
             Playoff Chances
             </h2>
-            <div className="flex bg-slate-200 rounded-md p-0.5 ml-4">
+            <div className="flex bg-slate-200 rounded-md p-0.5 sm:ml-4">
                 {['ALL', 'AFC', 'NFC'].map((conf) => (
                     <button
                         key={conf}
@@ -145,7 +145,7 @@ export const Results: React.FC<Props> = ({
                 ))}
             </div>
         </div>
-        <span className="text-[10px] font-mono text-slate-400">
+        <span className="text-[10px] font-mono text-slate-400 self-end sm:self-auto">
           {results[0]?.totalSimulations.toLocaleString()} SIMS
           {simDuration && (
              <span className="ml-2 opacity-60">
