@@ -7,9 +7,10 @@
 
 import type { Team, Game, SimulationResult } from '../types';
 import { sortTeams, type TeamStatsMap, type SeasonStats } from './tieBreakers';
-import { calculateWinProbability } from '../services/eloService';
+import { calculateWinProbability, updateEloAfterTie } from '../services/eloService';
 
 const K_FACTOR = 20;
+const TIE_PROB = 0.003; // Approx 1 tie per season (1/272 ≈ 0.0037)
 
 // --- HELPERS ---
 
@@ -220,17 +221,31 @@ export const runSimulation = (
                 const awayElo = simElo[awayIdx];
 
                 let winnerId = userPick;
-                let homeWins: boolean;
+                let homeWins = false;
+                let isTie = false;
 
                 if (winnerId) {
-                    homeWins = winnerId === home.id;
+                    if (winnerId === 'TIE') {
+                        isTie = true;
+                    } else {
+                        homeWins = winnerId === home.id;
+                    }
                 } else {
                     // Use pre-computed market odds or standard Elo calc
                     const winProb = hasMarketOdds 
                         ? marketOdds 
                         : calculateWinProbability(homeElo, awayElo, true);
-                    homeWins = Math.random() < winProb;
-                    winnerId = homeWins ? home.id : away.id;
+                    
+                    const rand = Math.random();
+                    if (rand < TIE_PROB) {
+                        isTie = true;
+                        winnerId = 'TIE';
+                    } else {
+                        // Rescale remaining probability to [0, 1]
+                        const adjustedRand = (rand - TIE_PROB) / (1 - TIE_PROB);
+                        homeWins = adjustedRand < winProb;
+                        winnerId = homeWins ? home.id : away.id;
+                    }
                 }
 
                 gameResults.set(game.id, winnerId);
@@ -241,7 +256,24 @@ export const runSimulation = (
                 }
 
                 // Update stats (inlined for speed)
-                if (homeWins) {
+                if (isTie) {
+                    homeStats.ties++;
+                    awayStats.ties++;
+                    
+                    if (sameConf) {
+                        homeStats.confTies++;
+                        awayStats.confTies++;
+                        if (sameDiv) {
+                            homeStats.divTies++;
+                            awayStats.divTies++;
+                        }
+                    }
+
+                    // Elo update
+                    const { newTeam1Elo, newTeam2Elo } = updateEloAfterTie(homeElo, awayElo, true);
+                    simElo[homeIdx] = newTeam1Elo;
+                    simElo[awayIdx] = newTeam2Elo;
+                } else if (homeWins) {
                     homeStats.wins++;
                     awayStats.losses++;
                     simWinsAgainst.get(home.id)!.push(away.id);
