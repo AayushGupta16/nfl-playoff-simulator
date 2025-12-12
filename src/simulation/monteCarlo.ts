@@ -8,6 +8,7 @@
 import type { Team, Game, SimulationResult } from '../types';
 import { sortTeams, type TeamStatsMap, type SeasonStats } from './tieBreakers';
 import { calculateWinProbability, updateEloAfterTie } from '../services/eloService';
+import { computeScheduleStrength } from './scheduleStrength';
 
 const K_FACTOR = 20;
 const TIE_PROB = 0.003; // Approx 1 tie per season (1/272 ≈ 0.0037)
@@ -315,30 +316,13 @@ export const runSimulation = (
             }
         }
 
-        // Calculate SOV and SOS using typed array for win percentages
-        const winPcts = new Float64Array(numTeams);
-        statsMap.forEach((stats, tid) => {
-            const idx = teamIdToIdx.get(tid)!;
-            const total = stats.wins + stats.losses + stats.ties;
-            winPcts[idx] = total > 0 ? (stats.wins + 0.5 * stats.ties) / total : 0;
-        });
-
-        statsMap.forEach((stats, tid) => {
-            // SOS: Average win % of all opponents
-            const opponents = scheduleMap.get(tid)!;
-            let sosSum = 0;
-            for (const oppId of opponents) {
-                sosSum += winPcts[teamIdToIdx.get(oppId)!];
-            }
-            stats.sos = opponents.length > 0 ? sosSum / opponents.length : 0;
-
-            // SOV: Average win % of defeated opponents
-            const defeated = simWinsAgainst.get(tid)!;
-            let sovSum = 0;
-            for (const oppId of defeated) {
-                sovSum += winPcts[teamIdToIdx.get(oppId)!];
-            }
-            stats.sov = defeated.length > 0 ? sovSum / defeated.length : 0;
+        // Calculate SOV and SOS using NFL definition (combined opponent record; weighted by games played)
+        computeScheduleStrength({
+            statsMap,
+            scheduleMap,
+            winsAgainst: simWinsAgainst,
+            teamIdToIdx,
+            numTeams
         });
 
         // Determine playoff spots (use pre-split conference/division arrays)

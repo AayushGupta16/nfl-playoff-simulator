@@ -51,19 +51,22 @@ When simulating games, we use a standard K-factor of 20 to update ratings. This 
 We implement the main early/mid NFL tiebreaker steps, then fall back to a coin toss.
 
 **Division ties:**
-1. Head-to-head
+1. Head-to-head (sweep-only for 3+ teams)
 2. Division record  
-3. Common games (min 4 opponents)
+3. Common games (min 4 common games, not opponents)
 4. Conference record
-5. Strength of Victory
-6. Strength of Schedule
+5. Strength of Victory (weighted by games played)
+6. Strength of Schedule (weighted by games played)
 7. Coin toss
 
 **Wildcard ties:**
-1. Head-to-head (sweep required for 3+ teams)
+1. Head-to-head (sweep-only for 3+ teams)
 2. Conference record
-3. Common games
+3. Common games (min 4 common games)
 4. SOV → SOS → Coin toss
+
+**Validation:**
+We have a unit test suite (`src/simulation/tieBreakers.test.ts`) that is intended to verify each of these steps individually, including the "restart after elimination" rule and multi-team edge cases.
 
 **What we skip:** All of the NFL's point-based and "combined ranking" steps (net points in various subsets of games, net touchdowns, etc). We don't model scores for simulated games and we don't try to approximate those rules. In practice, ties rarely get past SOV/SOS.
 

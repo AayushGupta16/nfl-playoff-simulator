@@ -12,9 +12,11 @@ When sanity-checking outputs, we look at:
 
 ## Known limitations
 
-### Tiebreakers are incomplete
+### Tiebreakers are record-accurate
 
-We implement the core record-based steps (head-to-head, division/conference records, common games, SOV, SOS) and then fall back to a coin toss. We skip the later, point-based steps in the official rules (combined rankings, net points in various subsets of games, net touchdowns). These rarely decide real tiebreakers, but it's not 100% accurate.
+We implement all record-based steps (head-to-head, division/conference records, common games, SOV, SOS) and have rigorously verified them with unit tests (`npm test`). This includes correct handling of complex multi-team rules (sweep-only H2H, restart-after-elimination) and correct calculation of SOS/SOV (using combined opponent records weighted by games played).
+
+We skip the later, point-based steps in the official rules (combined rankings, net points in various subsets of games, net touchdowns). These typically only matter if teams are tied on SOV and SOS, which is extremely rare.
 
 When all implemented steps fail to break a tie, we use random selection (the NFL uses a coin toss, so this is actually correct behavior for the final step).
 

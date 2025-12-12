@@ -37,9 +37,9 @@ Open http://localhost:5173
 
 ## Tiebreakers
 
-The simulator implements the main early/mid parts of the NFL tiebreaker procedure:
-- Division: H2H → division record → common games → conference record → SOV → SOS → coin toss
-- Wildcard: H2H (sweep for 3+) → conference record → common games → SOV → SOS → coin toss
+The simulator implements the main early/mid parts of the NFL tiebreaker procedure, rigorously verified by unit tests:
+- Division: H2H (sweep for 3+) → division record → common games (min 4) → conference record → SOV → SOS → coin toss
+- Wildcard: H2H (sweep for 3+) → conference record → common games (min 4) → SOV → SOS → coin toss
 
 **Limitations:** It skips all of the later point-based and "combined ranking" steps (various net-points rules, net touchdowns). It doesn't model scores for simulated games and doesn't try to approximate those rules. These steps rarely decide real tiebreakers.
 

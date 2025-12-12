@@ -113,8 +113,13 @@ const getCommonGamesRecord = (
 ): { wins: number; losses: number; ties: number; valid: boolean } => {
     const groupSet = new Set(groupIds);
 
+    // NFL rule: "common games" requires a minimum of **four common games** (not four common opponents).
+    // So we first compute the set of common opponents, then validate that each team has played
+    // at least 4 games against that opponent set.
     let commonOpponents: Set<string> | null = null;
     for (const tid of groupIds) {
+        // Use a Set here only to compute the intersection of opponents.
+        // We do NOT use opponent count to validate the 4-game minimum.
         const opps = new Set((opponentsMap.get(tid) || []).filter(o => !groupSet.has(o)));
         if (commonOpponents === null) {
             commonOpponents = opps;
@@ -123,10 +128,25 @@ const getCommonGamesRecord = (
                 if (!opps.has(o)) commonOpponents.delete(o);
             }
         }
-        if (commonOpponents.size < 4) break;
+        if (commonOpponents.size === 0) break;
     }
 
-    if (!commonOpponents || commonOpponents.size < 4) {
+    if (!commonOpponents || commonOpponents.size === 0) {
+        return { wins: 0, losses: 0, ties: 0, valid: false };
+    }
+
+    // Validate minimum 4 common games for this team.
+    let commonGamesPlayed = 0;
+    for (const g of teamGames) {
+        const isHome = g.homeTeamId === teamId;
+        const oppId = isHome ? g.awayTeamId : g.homeTeamId;
+        if (!commonOpponents.has(oppId)) continue;
+        const winner = gameResults.get(g.id);
+        if (!winner) continue;
+        commonGamesPlayed++;
+    }
+
+    if (commonGamesPlayed < 4) {
         return { wins: 0, losses: 0, ties: 0, valid: false };
     }
 
@@ -149,6 +169,56 @@ const getCommonGamesRecord = (
 // --- TIEBREAKER STEP DEFINITIONS ---
 
 type TiebreakerResult = { survivors: Team[]; eliminated: boolean };
+
+/**
+ * For 3+ team ties, the NFL only applies head-to-head if one club has:
+ * - defeated each of the others (clean sweep), OR
+ * - lost to each of the others (cleanly swept)
+ *
+ * If neither condition holds, the head-to-head step is considered "not applicable"
+ * and we should proceed to the next tiebreaker without eliminating anyone.
+ */
+const applyMultiTeamSweepH2H = (
+    pool: Team[],
+    gameResults: Map<string, string>,
+    teamGamesMap: Map<string, Game[]>
+): TiebreakerResult => {
+    if (pool.length <= 2) return { survivors: pool, eliminated: false };
+
+    const ids = new Set(pool.map(t => t.id));
+    const records = pool.map(t => {
+        const games = teamGamesMap.get(t.id) ?? [];
+        const record = getH2HRecord(t.id, ids, games, gameResults);
+        return { team: t, record };
+    });
+
+    const otherTeamCount = pool.length - 1;
+
+    // 1) Clean sweep (beat everyone else)
+    const sweepers = records.filter(r =>
+        r.record.opponentsPlayed.size === otherTeamCount &&
+        r.record.losses === 0 &&
+        r.record.ties === 0 &&
+        r.record.wins > 0
+    );
+    if (sweepers.length === 1) {
+        return { survivors: [sweepers[0].team], eliminated: true };
+    }
+
+    // 2) Cleanly swept (lost to everyone else)
+    const swept = records.filter(r =>
+        r.record.opponentsPlayed.size === otherTeamCount &&
+        r.record.wins === 0 &&
+        r.record.ties === 0 &&
+        r.record.losses > 0
+    );
+    if (swept.length > 0 && swept.length < pool.length) {
+        const sweptIds = new Set(swept.map(s => s.team.id));
+        return { survivors: pool.filter(t => !sweptIds.has(t.id)), eliminated: true };
+    }
+
+    return { survivors: pool, eliminated: false };
+};
 
 const applyBestMetric = (
     pool: Team[],
@@ -173,6 +243,11 @@ const applyDivisionH2H = (
 ): TiebreakerResult => {
     if (pool.length <= 1) return { survivors: pool, eliminated: false };
 
+    // 3+ teams: sweep-only applicability (NFL rule)
+    if (pool.length >= 3) {
+        return applyMultiTeamSweepH2H(pool, gameResults, teamGamesMap);
+    }
+
     const ids = new Set(pool.map(t => t.id));
     const records = pool.map(t => {
         const games = teamGamesMap.get(t.id) ?? [];
@@ -193,6 +268,11 @@ const applyWildcardH2H = (
 ): TiebreakerResult => {
     if (pool.length <= 1) return { survivors: pool, eliminated: false };
 
+    // 3+ teams: sweep-only applicability (NFL rule)
+    if (pool.length >= 3) {
+        return applyMultiTeamSweepH2H(pool, gameResults, teamGamesMap);
+    }
+
     const ids = new Set(pool.map(t => t.id));
     const records = pool.map(t => {
         const games = teamGamesMap.get(t.id) ?? [];
@@ -200,50 +280,10 @@ const applyWildcardH2H = (
         return { team: t, record, pct: getH2HPct(record) };
     });
 
-    if (pool.length === 2) {
-        const maxPct = Math.max(...records.map(r => r.pct));
-        const best = records.filter(r => Math.abs(r.pct - maxPct) < EPSILON).map(r => r.team);
-        return { survivors: best, eliminated: best.length < pool.length };
-    }
-
-    // 3+ teams: check for sweep
-    // Rule: "Applicable only if one club has defeated each of the others or if one club has lost to each of the others."
-    
-    const otherTeamCount = pool.length - 1;
-    
-    // 1. Check for a "sweeper" (team that beat everyone else)
-    // There can only be one sweeper in a group of 3+ teams.
-    const sweepers = records.filter(r =>
-        r.record.opponentsPlayed.size === otherTeamCount && // Played everyone
-        r.record.losses === 0 &&
-        r.record.ties === 0 &&
-        r.record.wins > 0 // Redundant but safe
-    );
-
-    if (sweepers.length === 1) {
-        return { survivors: [sweepers[0].team], eliminated: true };
-    }
-
-    // 2. Check for "swept" teams (teams that lost to everyone else)
-    // Multiple teams could be swept (e.g. A beats B & C, B beats C. C is swept by A & B? No, B beats C. A beats C. C is swept.)
-    // Wait, "lost to EACH of the others".
-    const swept = records.filter(r =>
-        r.record.opponentsPlayed.size === otherTeamCount && // Played everyone
-        r.record.wins === 0 &&
-        r.record.ties === 0 &&
-        r.record.losses > 0
-    );
-
-    if (swept.length > 0 && swept.length < pool.length) {
-        const sweptIds = new Set(swept.map(s => s.team.id));
-        return {
-            survivors: pool.filter(t => !sweptIds.has(t.id)),
-            eliminated: true
-        };
-    }
-
-    // No sweep logic applies -> proceed to next step
-    return { survivors: pool, eliminated: false };
+    // 2 teams: use head-to-head percentage
+    const maxPct = Math.max(...records.map(r => r.pct));
+    const best = records.filter(r => Math.abs(r.pct - maxPct) < EPSILON).map(r => r.team);
+    return { survivors: best, eliminated: best.length < pool.length };
 };
 
 const applyCommonGames = (

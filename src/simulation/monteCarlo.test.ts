@@ -1,6 +1,7 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, afterEach } from 'vitest';
 import { runSimulation, eloDiffToWinProb, winProbToEloDiff } from './monteCarlo';
 import type { Team, Game } from '../types';
+import { vi } from 'vitest';
 
 // Mock Data Helpers
 const createMockTeam = (id: string, name: string): Team => ({
@@ -21,6 +22,9 @@ const createMockGame = (id: string, week: number, home: string, away: string, ma
 });
 
 describe('Monte Carlo Simulation Logic', () => {
+    afterEach(() => {
+        vi.restoreAllMocks();
+    });
     
     it('should correctly convert Elo diff to probability and back (inverse functions)', () => {
         const eloDiff = 300;
@@ -43,16 +47,33 @@ describe('Monte Carlo Simulation Logic', () => {
             createMockGame('g2', 2, 'CLE', 'CHI', 0.5) 
         ];
 
-        // Baseline: No picks (random outcomes)
-        const baseline = runSimulation(teams, games, 1000, new Map(), new Map());
-        const baselineChiWinProb = 1 - (baseline.simulatedOdds.get('g2') ?? 0); 
-        
-        // Scenario: User picks CHI to win Week 1 (always wins → Elo boost)
-        const userPicks = new Map([['g1', 'CHI']]);
-        const momentum = runSimulation(teams, games, 1000, new Map(), new Map(), userPicks);
+        const kalshiElo = new Map(teams.map(t => [t.id, 1500] as const));
+
+        // Make the test deterministic by controlling RNG:
+        // - Baseline consumes RNG for Week 1 then Week 2.
+        // - Momentum consumes RNG only for Week 2 (Week 1 is user-picked).
+        //
+        // Choose values so Week 1 baseline results in CHI losing (Elo down),
+        // and Week 2 RNG sits between the baseline and momentum home-win thresholds.
+        const randSpy = vi.spyOn(Math, 'random');
+        randSpy
+          .mockImplementationOnce(() => 0.10) // baseline Week 1: GB (home) wins
+          .mockImplementationOnce(() => 0.57) // baseline Week 2 RNG
+          // Any additional randomness (e.g. coin-toss tiebreakers) should be stable and defined
+          .mockImplementation(() => 0.42);
+
+        const baseline = runSimulation(teams, games, 1, new Map(), kalshiElo);
+        const baselineChiWinProb = 1 - (baseline.simulatedOdds.get('g2') ?? 0);
+
+        randSpy.mockReset();
+        randSpy
+          .mockImplementationOnce(() => 0.57) // momentum Week 2 RNG (same as baseline Week 2)
+          .mockImplementation(() => 0.42);
+
+        const userPicks = new Map([['g1', 'CHI']]); // Week 1 CHI win -> Elo up
+        const momentum = runSimulation(teams, games, 1, new Map(), kalshiElo, userPicks);
         const momentumChiWinProb = 1 - (momentum.simulatedOdds.get('g2') ?? 0);
 
-        // CHI win prob should increase due to Elo gain from Week 1 win
         expect(momentumChiWinProb).toBeGreaterThan(baselineChiWinProb);
     });
 
@@ -72,7 +93,8 @@ describe('Monte Carlo Simulation Logic', () => {
         const marketOdds = new Map([['g2', 0.15]]); 
         
         const userPicks = new Map([['g1', 'CHI']]);
-        const result = runSimulation(teams, games, 1000, marketOdds, new Map(), userPicks);
+        const kalshiElo = new Map(teams.map(t => [t.id, 1500] as const));
+        const result = runSimulation(teams, games, 1000, marketOdds, kalshiElo, userPicks);
         
         const chiWinProb = 1 - (result.simulatedOdds.get('g2') ?? 0);
 
