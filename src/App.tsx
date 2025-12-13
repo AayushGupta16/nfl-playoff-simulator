@@ -28,6 +28,7 @@ function Simulator() {
   const [kalshiElos, setKalshiElos] = useState<Map<string, number>>(new Map());
   const [calibrationDone, setCalibrationDone] = useState(false);
   const [hasInitialRun, setHasInitialRun] = useState(false);
+  const calibrationStartedRef = useRef(false);
 
   const [simulatedOdds, setSimulatedOdds] = useState<Map<string, number>>(new Map());
   const [results, setResults] = useState<SimulationResult[]>([]);
@@ -45,6 +46,7 @@ function Simulator() {
 
   // Worker Ref
   const workerRef = useRef<Worker | null>(null);
+  const didLoadDataRef = useRef(false);
 
   useEffect(() => {
     // Initialize Worker
@@ -53,13 +55,35 @@ function Simulator() {
     });
 
     workerRef.current.onmessage = (e) => {
-        const { type, results, simulatedOdds, error, calibratedElos } = e.data;
+        const { type, results, simulatedOdds, error, calibratedElos, calibrationMeta } = e.data;
         
         if (type === 'CALIBRATION_COMPLETE') {
             if (calibratedElos) {
                 setKalshiElos(new Map(calibratedElos));
                 setCalibrationDone(true);
+                calibrationStartedRef.current = false;
                 console.log('Calibration complete. New Elos applied.');
+                if (calibrationMeta) {
+                  const stoppedText = calibrationMeta.stoppedByThreshold ? 'YES' : 'NO';
+                  const finalMaxDiffPct =
+                    typeof calibrationMeta.finalMaxDiff === 'number'
+                      ? (calibrationMeta.finalMaxDiff * 100).toFixed(2)
+                      : 'n/a';
+                  const finalRmsePct =
+                    typeof calibrationMeta.finalRmse === 'number'
+                      ? (calibrationMeta.finalRmse * 100).toFixed(2)
+                      : 'n/a';
+                  const metric = typeof calibrationMeta.metric === 'string' ? calibrationMeta.metric : 'n/a';
+                  const thresholdPct =
+                    typeof calibrationMeta.threshold === 'number'
+                      ? (calibrationMeta.threshold * 100).toFixed(2)
+                      : 'n/a';
+                  console.log(
+                    `Calibration meta: stoppedByThreshold=${stoppedText}, ` +
+                      `roundsRun=${calibrationMeta.roundsRun}/${calibrationMeta.iterations}, ` +
+                      `metric=${metric}, finalRMSE=${finalRmsePct}%, finalMaxDiff=${finalMaxDiffPct}%, threshold=${thresholdPct}%`
+                  );
+                }
             }
             setSimulating(false);
             // Note: Auto-run sim will be handled by the useEffect dependent on calibrationDone
@@ -74,6 +98,7 @@ function Simulator() {
         } else if (type === 'ERROR') {
             console.error("Worker Error:", error);
             setError("Simulation failed.");
+            calibrationStartedRef.current = false;
             setSimulating(false);
         }
     };
@@ -161,6 +186,9 @@ function Simulator() {
   }, []);
 
   useEffect(() => {
+    // React 18 StrictMode runs effects twice in dev; avoid double-fetching external APIs.
+    if (didLoadDataRef.current) return;
+    didLoadDataRef.current = true;
     loadData();
   }, [loadData]);
 
@@ -191,6 +219,7 @@ function Simulator() {
     if (calibrationDone) return;
     if (!workerRef.current) return;
     if (teams.length === 0 || games.length === 0) return;
+    if (calibrationStartedRef.current) return;
 
     if (marketPlayoffOdds.size === 0) {
         // No playoff markets → mark done, use win-total Elo only.
@@ -200,6 +229,7 @@ function Simulator() {
 
     console.log("Starting Elo calibration to match Kalshi playoff odds...");
     setSimulating(true);
+    calibrationStartedRef.current = true;
 
     workerRef.current.postMessage({
         action: 'CALIBRATE',

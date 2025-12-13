@@ -63,7 +63,10 @@ export const Methodology: React.FC = () => {
                   Before running the main simulation, we automatically calibrate team Elos to match Kalshi's <strong>"Make Playoffs"</strong> markets.
                 </p>
                 <p className="text-sm text-slate-600">
-                  We run several quick passes of 1,000 simulations in the background. After each pass, if a team's simulated playoff probability differs from their market price, we nudge their Elo rating up or down until they align. This ensures the simulator's unconditional results match the market, while maintaining coherent "what-if" scenarios for user picks.
+                  We run up to 10 quick calibration rounds in the background. Each round runs ~1,000 simulations, compares each team's simulated playoff probability to the market price, and nudges Elo ratings up/down. We stop early when the overall error (RMSE across teams) falls below 2%.
+                </p>
+                <p className="text-xs text-slate-500 mt-2">
+                  RMSE (root mean squared error) is an average error measure that penalizes larger misses more than smaller ones.
                 </p>
               </div>
 
@@ -140,7 +143,7 @@ export const Methodology: React.FC = () => {
           <section className="border-t border-slate-200 pt-6">
             <h2 className="text-lg font-bold text-slate-900 mb-2">Limitations</h2>
             <ul className="text-sm text-slate-600 space-y-1 list-disc pl-5">
-              <li>Elo parameters (home field, K-factor) are borrowed, not calibrated</li>
+              <li>Home-field advantage and in-simulation K-factor are borrowed defaults (not a rigorous historical fit)</li>
               <li>No real-time injury/news integration</li>
               <li>Some rare tiebreaker steps are approximated</li>
               <li>Simulation count affects precision (more iterations = more precise)</li>

@@ -5,7 +5,7 @@
  * Game updates use margin-of-victory adjustments (538-style).
  */
 
-import axios from 'axios';
+import { kalshiGet } from './kalshiHttp';
 
 // --- CONSTANTS ---
 // These are configurable assumptions. See docs for rationale.
@@ -122,60 +122,64 @@ export const fetchKalshiWinTotals = async (): Promise<Map<string, number>> => {
     console.log("Fetching Kalshi season win totals...");
 
     try {
-        const seriesResponse = await axios.get(buildKalshiUrl('series', { limit: 200 }));
+        const seriesResponse = await kalshiGet(buildKalshiUrl('series', { limit: 200 }));
         const nflWinSeries = seriesResponse.data.series?.filter((s: any) =>
             s.ticker.startsWith('KXNFLWINS-') && !s.ticker.includes('EXACT')
         ) || [];
 
         console.log(`  Found ${nflWinSeries.length} team win total series`);
 
-        const marketPromises = nflWinSeries.map(async (series: any) => {
-            const teamAbbr = series.ticker.replace('KXNFLWINS-', '');
-            const teamName = KALSHI_ABBR_TO_NAME[teamAbbr];
+        // Fire off all series requests, but through a shared global limiter that also retries 429s.
+        await Promise.all(
+            nflWinSeries.map(async (series: any) => {
+                const teamAbbr = series.ticker.replace('KXNFLWINS-', '');
+                const teamName = KALSHI_ABBR_TO_NAME[teamAbbr];
 
-            if (!teamName) {
-                console.log(`  Unknown abbreviation: ${teamAbbr}`);
-                return;
-            }
+                if (!teamName) {
+                    console.log(`  Unknown abbreviation: ${teamAbbr}`);
+                    return;
+                }
 
-            try {
-                const marketsResponse = await axios.get(buildKalshiUrl('markets', {
-                    series_ticker: series.ticker,
-                    limit: 50,
-                    status: 'open'
-                }));
+                try {
+                    const marketsResponse = await kalshiGet(
+                        buildKalshiUrl('markets', {
+                            series_ticker: series.ticker,
+                            limit: 50,
+                            status: 'open'
+                        })
+                    );
 
-                const markets = marketsResponse.data.markets || [];
-                const winMarkets: KalshiWinMarket[] = [];
+                    const markets = marketsResponse.data.markets || [];
+                    const winMarkets: KalshiWinMarket[] = [];
 
-                for (const market of markets) {
-                    const match = market.ticker.match(/-T(\d+)$/);
-                    if (!match) continue;
+                    for (const market of markets) {
+                        const match = market.ticker.match(/-T(\d+)$/);
+                        if (!match) continue;
 
-                    const threshold = parseInt(match[1]);
-                    let probability: number;
+                        const threshold = parseInt(match[1]);
+                        let probability: number;
 
-                    if (market.yes_bid > 0 && market.yes_ask > 0 && market.yes_ask < 100) {
-                        probability = (market.yes_bid + market.yes_ask) / 2 / 100;
-                    } else if (market.last_price > 0) {
-                        probability = market.last_price / 100;
-                    } else {
-                        continue;
+                        if (market.yes_bid > 0 && market.yes_ask > 0 && market.yes_ask < 100) {
+                            probability = (market.yes_bid + market.yes_ask) / 2 / 100;
+                        } else if (market.last_price > 0) {
+                            probability = market.last_price / 100;
+                        } else {
+                            continue;
+                        }
+
+                        winMarkets.push({ ticker: market.ticker, threshold, probability });
                     }
 
-                    winMarkets.push({ ticker: market.ticker, threshold, probability });
+                    const expectedWins = calculateExpectedWins(winMarkets);
+                    if (expectedWins > 0) {
+                        expectedWinsMap.set(teamName, expectedWins);
+                    }
+                } catch (err) {
+                    console.warn(`  Failed to fetch markets for ${teamName}`, err);
                 }
+            })
+        );
 
-                const expectedWins = calculateExpectedWins(winMarkets);
-                if (expectedWins > 0) {
-                    expectedWinsMap.set(teamName, expectedWins);
-                }
-            } catch (err) {
-                console.warn(`  Failed to fetch markets for ${teamName}`, err);
-            }
-        });
-
-        await Promise.all(marketPromises);
         console.log(`  Got expected wins for ${expectedWinsMap.size} teams`);
     } catch (error) {
         console.warn("Failed to fetch Kalshi win totals:", error);

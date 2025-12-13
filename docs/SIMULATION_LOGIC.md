@@ -46,6 +46,18 @@ For each of 10,000 iterations:
 
 When simulating games, we use a standard K-factor of 20 to update ratings. This allows simulated win streaks to improve a team's odds in subsequent simulated games.
 
+## Playoff-odds calibration (pre-simulation)
+
+If Kalshi "Make Playoffs" markets are available, we run an **Elo calibration** step before the main simulation.
+
+- **Goal**: adjust team Elo ratings so that the simulator's *unconditional* playoff probabilities match Kalshi's market probabilities as closely as possible.
+- **Mechanism**: run short Monte Carlo batches, compare each team's simulated playoff probability to the market target, then nudge Elo up/down proportional to the difference.
+- **Stopping rule**: stop early when **RMSE across teams** is below **2%**.
+  - **RMSE** (root mean squared error) is like an average error size, but it penalizes big misses more than a plain average because it squares errors before averaging.
+- **Runtime controls**: we cap calibration to **10 rounds** and run **1000 simulations per round** (so calibration usually stops after ~5–6 rounds once RMSE drops below 2%).
+
+Calibration is implemented in `src/simulation/worker.ts`.
+
 ## Tiebreakers
 
 We implement the main early/mid NFL tiebreaker steps, then fall back to a coin toss.

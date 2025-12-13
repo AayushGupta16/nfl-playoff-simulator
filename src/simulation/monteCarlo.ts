@@ -7,11 +7,31 @@
 
 import type { Team, Game, SimulationResult } from '../types';
 import { sortTeams, type TeamStatsMap, type SeasonStats } from './tieBreakers';
-import { calculateWinProbability, updateEloAfterTie } from '../services/eloService';
+import { calculateWinProbability } from '../services/eloService';
 import { computeScheduleStrength } from './scheduleStrength';
 
 const K_FACTOR = 20;
 const TIE_PROB = 0.003; // Approx 1 tie per season (1/272 ≈ 0.0037)
+
+export type EloUpdateConfig = {
+    /** Base K-factor used for in-simulation Elo updates (default: 20). */
+    baseK?: number;
+    /**
+     * Upset exponent (gamma) applied to (1 - expected).
+     * - 1.0 => standard Elo
+     * - >1  => amplify underdog wins, dampen favorite wins
+     */
+    upsetExponent?: number;
+    /**
+     * Optional dynamic-K scaling with Elo gap:
+     * K_effective = baseK * clamp(1 + kEloGapMultiplier * (|eloDiff| / kEloGapScale), 0, maxKMultiplier)
+     */
+    kEloGapMultiplier?: number;
+    kEloGapScale?: number; // Elo points, default 400
+    maxKMultiplier?: number; // default 3
+};
+
+const clamp = (x: number, lo: number, hi: number): number => Math.max(lo, Math.min(hi, x));
 
 // --- HELPERS ---
 
@@ -42,7 +62,8 @@ export const runSimulation = (
     numSimulations: number,
     oddsMap: Map<string, number>,
     kalshiEloMap: Map<string, number>,
-    userPicks: Map<string, string> = new Map()
+    userPicks: Map<string, string> = new Map(),
+    eloUpdateConfig: EloUpdateConfig = {}
 ): { teamResults: SimulationResult[], simulatedOdds: Map<string, number> } => {
     if (kalshiEloMap.size === 0) {
         throw new Error('Kalshi Elo map is required. Cannot run simulation without market data.');
@@ -111,6 +132,17 @@ export const runSimulation = (
         remainingByWeek.get(g.week)!.push(g);
     });
     const weeks = Array.from(remainingByWeek.keys()).sort((a, b) => a - b);
+
+    // In-sim Elo update params (kept outside hot loops)
+    const baseK = eloUpdateConfig.baseK ?? K_FACTOR;
+    const upsetExponent = eloUpdateConfig.upsetExponent ?? 1;
+    const kEloGapMultiplier = eloUpdateConfig.kEloGapMultiplier ?? 0;
+    const kEloGapScale = eloUpdateConfig.kEloGapScale ?? 400;
+    const maxKMultiplier = eloUpdateConfig.maxKMultiplier ?? 3;
+    const getKEffective = (eloDiff: number): number => {
+        const mult = 1 + kEloGapMultiplier * (Math.abs(eloDiff) / kEloGapScale);
+        return baseK * clamp(mult, 0, maxKMultiplier);
+    };
 
     // Pre-build team lookup for O(1) access in hot loop
     const teamById = new Map<string, Team>();
@@ -270,10 +302,12 @@ export const runSimulation = (
                         }
                     }
 
-                    // Elo update
-                    const { newTeam1Elo, newTeam2Elo } = updateEloAfterTie(homeElo, awayElo, true);
-                    simElo[homeIdx] = newTeam1Elo;
-                    simElo[awayIdx] = newTeam2Elo;
+                    // Elo update (tie)
+                    // Use baseK so tie behavior stays consistent if we tune K.
+                    const homeExpected = calculateWinProbability(homeElo, awayElo, true);
+                    const eloChange = baseK * (0.5 - homeExpected);
+                    simElo[homeIdx] = homeElo + eloChange;
+                    simElo[awayIdx] = awayElo - eloChange;
                 } else if (homeWins) {
                     homeStats.wins++;
                     awayStats.losses++;
@@ -288,9 +322,10 @@ export const runSimulation = (
                         }
                     }
                     
-                    // Elo update
+                    // Elo update (home team won)
                     const winnerExpected = calculateWinProbability(homeElo, awayElo, true);
-                    const eloChange = K_FACTOR * (1 - winnerExpected);
+                    const kEff = getKEffective(homeElo - awayElo);
+                    const eloChange = kEff * Math.pow(1 - winnerExpected, upsetExponent);
                     simElo[homeIdx] = homeElo + eloChange;
                     simElo[awayIdx] = awayElo - eloChange;
                 } else {
@@ -309,7 +344,8 @@ export const runSimulation = (
                     
                     // Elo update (away team won)
                     const winnerExpected = calculateWinProbability(awayElo, homeElo, false);
-                    const eloChange = K_FACTOR * (1 - winnerExpected);
+                    const kEff = getKEffective(awayElo - homeElo);
+                    const eloChange = kEff * Math.pow(1 - winnerExpected, upsetExponent);
                     simElo[awayIdx] = awayElo + eloChange;
                     simElo[homeIdx] = homeElo - eloChange;
                 }

@@ -16,7 +16,7 @@
  * to avoid browser CORS restrictions. See vite.config.ts.
  */
 
-import axios from 'axios';
+import { kalshiGet } from './kalshiHttp';
 import type { Game } from '../types';
 
 // In production, we use a serverless function that takes path as a query param
@@ -62,7 +62,7 @@ const fetchAllOpenMarkets = async (
         };
         if (cursor) params.cursor = cursor;
 
-        const response = await axios.get(buildKalshiUrl('markets', params));
+        const response = await kalshiGet(buildKalshiUrl('markets', params));
         const data = response.data;
 
         if (data.markets) {
