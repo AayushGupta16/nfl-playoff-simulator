@@ -25,11 +25,13 @@ class SimpleRateLimiter {
   private readonly queue: Array<() => void> = [];
   private active = 0;
   private lastStart = 0;
+  private readonly maxConcurrent: number;
+  private readonly minTimeMs: number;
 
-  constructor(
-    private readonly maxConcurrent: number,
-    private readonly minTimeMs: number
-  ) {}
+  constructor(maxConcurrent: number, minTimeMs: number) {
+    this.maxConcurrent = maxConcurrent;
+    this.minTimeMs = minTimeMs;
+  }
 
   schedule<T>(fn: () => Promise<T>): Promise<T> {
     return new Promise<T>((resolve, reject) => {
